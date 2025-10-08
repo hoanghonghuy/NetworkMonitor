@@ -43,7 +43,7 @@ A lightweight network traffic monitor for Windows that displays real-time downlo
 1. Clone the repository
 
 ```
-git clone https://github.com/yourusername/NetworkMonitor.git
+git clone https://github.com/hoanghonghuy/NetworkMonitor.git
 cd NetworkMonitor
 ```
 
@@ -63,7 +63,7 @@ cd NetworkMonitor
 1. Clone the repository
 
 ```
-git clone https://github.com/yourusername/NetworkMonitor.git
+git clone https://github.com/hoanghonghuy/NetworkMonitor.git
 cd NetworkMonitor
 ```
 
@@ -174,7 +174,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-Project Link: https://github.com/yourusername/NetworkMonitor
+Project Link: https://github.com/hoanghonghuy/NetworkMonitor
 
 ## Known Issues
 
