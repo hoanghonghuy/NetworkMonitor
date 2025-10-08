@@ -1,0 +1,14 @@
+# Build outputs
+build/
+*.exe
+*.obj
+*.pdb
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+
+# Temporary files
+*.log
+*.tmp

@@ -1,0 +1,85 @@
+// ============================================================================
+// File: Utils.h
+// Description: Utility functions and helpers
+// Author: NetworkMonitor Project
+// ============================================================================
+
+#ifndef NETWORK_MONITOR_UTILS_H
+#define NETWORK_MONITOR_UTILS_H
+
+#include "NetworkMonitor/Common.h"
+#include <string>
+
+namespace NetworkMonitor
+{
+
+// ============================================================================
+// STRING UTILITIES
+// ============================================================================
+
+/**
+ * Convert bytes to human-readable string with appropriate unit
+ * @param bytes Number of bytes
+ * @param unit Target unit for conversion
+ * @return Formatted string (e.g., "1.23 MB/s")
+ */
+std::wstring FormatSpeed(double bytesPerSecond, SpeedUnit unit);
+
+/**
+ * Convert bytes to human-readable size string
+ * @param bytes Number of bytes
+ * @return Formatted string (e.g., "1.23 GB")
+ */
+std::wstring FormatBytes(ULONG64 bytes);
+
+/**
+ * Convert SpeedUnit enum to string
+ * @param unit Speed unit enum value
+ * @return Unit string (e.g., "KB/s")
+ */
+std::wstring SpeedUnitToString(SpeedUnit unit);
+
+// ============================================================================
+// CONVERSION UTILITIES
+// ============================================================================
+
+/**
+ * Convert bytes per second to target unit
+ * @param bytesPerSecond Speed in bytes per second
+ * @param unit Target unit
+ * @return Converted value
+ */
+double ConvertSpeed(double bytesPerSecond, SpeedUnit unit);
+
+// ============================================================================
+// TIME UTILITIES
+// ============================================================================
+
+/**
+ * Get elapsed time in seconds between two GetTickCount values
+ * @param start Start time from GetTickCount
+ * @param end End time from GetTickCount
+ * @return Elapsed time in seconds
+ */
+double GetElapsedSeconds(DWORD start, DWORD end);
+
+// ============================================================================
+// ERROR HANDLING UTILITIES
+// ============================================================================
+
+/**
+ * Get last Windows error message as string
+ * @return Error message string
+ */
+std::wstring GetLastErrorString();
+
+/**
+ * Show error message box
+ * @param message Error message
+ * @param title Dialog title (optional)
+ */
+void ShowErrorMessage(const std::wstring& message, const std::wstring& title = L"Error");
+
+} // namespace NetworkMonitor
+
+#endif // NETWORK_MONITOR_UTILS_H

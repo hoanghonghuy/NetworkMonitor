@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: NetworkMonitor.vcxproj.filters
+    Description: Visual Studio filters file for organizing project files
+    Author: NetworkMonitor Project
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  
+  <!-- ====================================================================== -->
+  <!-- FILTER DEFINITIONS -->
+  <!-- ====================================================================== -->
+  
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    
+    <Filter Include="Resource Files\Icons">
+      <UniqueIdentifier>{12345678-1234-1234-1234-123456789ABC}</UniqueIdentifier>
+    </Filter>
+    
+    <Filter Include="Resource Files\Manifest">
+      <UniqueIdentifier>{87654321-4321-4321-4321-CBA987654321}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  
+  <!-- ====================================================================== -->
+  <!-- SOURCE FILE MAPPINGS -->
+  <!-- ====================================================================== -->
+  
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\NetworkCalculator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\NetworkMonitor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ConfigManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TrayIcon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  
+  <!-- ====================================================================== -->
+  <!-- HEADER FILE MAPPINGS -->
+  <!-- ====================================================================== -->
+  
+  <ItemGroup>
+    <ClInclude Include="include\NetworkMonitor\Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\NetworkMonitor\Utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\NetworkMonitor\NetworkCalculator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\NetworkMonitor\NetworkMonitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\NetworkMonitor\ConfigManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\NetworkMonitor\TrayIcon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resources\resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  
+  <!-- ====================================================================== -->
+  <!-- RESOURCE FILE MAPPINGS -->
+  <!-- ====================================================================== -->
+  
+  <ItemGroup>
+    <ResourceCompile Include="resources\app.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="resources\app.manifest">
+      <Filter>Resource Files\Manifest</Filter>
+    </None>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Image Include="resources\icons\app_icon.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="resources\icons\tray_idle.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="resources\icons\tray_active.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="resources\icons\tray_high.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+  </ItemGroup>
+  
+</Project>

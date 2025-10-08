@@ -1,0 +1,14 @@
+{
+  "default_model": "models/gemini-flash-latest",
+  "model_fallback_order": [
+    "models/gemini-flash-latest",
+    "models/gemini-pro-latest"
+  ],
+  "default_format": "rich",
+  "default_system_instruction": "You are a helpful AI assistant.",
+  "personas": {},
+  "saved_instructions": [],
+  "database": {
+    "connection_string": null
+  }
+}

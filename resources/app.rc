@@ -1,0 +1,149 @@
+// ============================================================================
+// File: app.rc
+// Description: Resource script for NetworkMonitor
+// Author: NetworkMonitor Project
+// ============================================================================
+
+#include <windows.h>
+#include "resource.h"
+
+// ============================================================================
+// LANGUAGE AND CODE PAGE SETTINGS
+// ============================================================================
+
+#pragma code_page(65001) // UTF-8
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+// ============================================================================
+// ICON RESOURCES - COMMENTED OUT TEMPORARILY
+// ============================================================================
+
+// TODO: Add proper .ICO files later
+// Main application icon (displayed in Explorer)
+// IDI_APP_ICON            ICON    "icons/app_icon.ico"
+
+// Tray icons for different states
+// IDI_TRAY_IDLE           ICON    "icons/tray_idle.ico"
+// IDI_TRAY_ACTIVE         ICON    "icons/tray_active.ico"
+// IDI_TRAY_HIGH           ICON    "icons/tray_high.ico"
+
+// ============================================================================
+// MENU RESOURCES
+// ============================================================================
+
+IDR_TRAY_MENU MENU
+BEGIN
+    POPUP ""
+    BEGIN
+        POPUP "&Update Interval"
+        BEGIN
+            MENUITEM "Fast (1s)",           IDM_UPDATE_FAST
+            MENUITEM "Normal (2s)",         IDM_UPDATE_NORMAL
+            MENUITEM "Slow (5s)",           IDM_UPDATE_SLOW
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "Start with &Windows",    IDM_AUTOSTART
+        MENUITEM SEPARATOR
+        MENUITEM "&Settings...",            IDM_SETTINGS
+        MENUITEM "&About...",               IDM_ABOUT
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                   IDM_EXIT
+    END
+END
+
+// ============================================================================
+// STRING RESOURCES
+// ============================================================================
+
+STRINGTABLE
+BEGIN
+    IDS_APP_TITLE           "NetworkMonitor"
+    IDS_ERROR_INIT          "Failed to initialize NetworkMonitor"
+    IDS_ERROR_NETWORK       "Failed to access network interfaces"
+END
+
+// ============================================================================
+// VERSION INFORMATION
+// ============================================================================
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "NetworkMonitor Project"
+            VALUE "FileDescription", "Network Traffic Monitor for Windows"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "NetworkMonitor.exe"
+            VALUE "LegalCopyright", "Copyright (C) 2025"
+            VALUE "OriginalFilename", "NetworkMonitor.exe"
+            VALUE "ProductName", "NetworkMonitor"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+// ============================================================================
+// MANIFEST RESOURCE
+// ============================================================================
+
+// Embed the application manifest
+// 1 RT_MANIFEST "app.manifest"
+
+// ============================================================================
+// DIALOG RESOURCES (Optional - for future use)
+// ============================================================================
+
+IDD_ABOUT_DIALOG DIALOGEX 0, 0, 250, 120
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About NetworkMonitor"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    // ICON COMMENTED OUT - IDI_APP_ICON not defined yet
+    // ICON            IDI_APP_ICON,IDC_STATIC,7,7,21,20
+    LTEXT           "NetworkMonitor",IDC_STATIC,40,10,200,8,SS_NOPREFIX
+    LTEXT           "Version 1.0.0",IDC_VERSION_TEXT,40,25,200,8
+    LTEXT           "A lightweight network traffic monitor for Windows.",IDC_STATIC,40,40,200,8
+    LTEXT           "Copyright (C) 2025",IDC_COPYRIGHT_TEXT,40,55,200,8
+    DEFPUSHBUTTON   "OK",IDOK,95,95,60,14,WS_GROUP
+END
+
+IDD_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 200
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "NetworkMonitor Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Update Settings",IDC_STATIC,7,7,286,50
+    LTEXT           "Update Interval:",IDC_STATIC,15,25,70,8
+    COMBOBOX        IDC_UPDATE_INTERVAL_COMBO,90,23,100,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    
+    GROUPBOX        "Display Settings",IDC_STATIC,7,65,286,50
+    LTEXT           "Speed Unit:",IDC_STATIC,15,83,70,8
+    COMBOBOX        IDC_DISPLAY_UNIT_COMBO,90,81,100,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    
+    GROUPBOX        "Network Interface",IDC_STATIC,7,123,286,50
+    LTEXT           "Monitor:",IDC_STATIC,15,141,70,8
+    COMBOBOX        IDC_INTERFACE_COMBO,90,139,190,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    
+    CONTROL         "Start with Windows",IDC_AUTOSTART_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,180,120,10
+    
+    DEFPUSHBUTTON   "OK",IDOK,135,180,60,14
+    PUSHBUTTON      "Cancel",IDCANCEL,200,180,60,14
+END

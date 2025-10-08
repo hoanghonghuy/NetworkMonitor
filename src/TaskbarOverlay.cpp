@@ -1,0 +1,514 @@
+// ============================================================================
+// File: TaskbarOverlay.cpp
+// Description: Implementation of taskbar overlay window
+// Author: NetworkMonitor Project
+// ============================================================================
+
+#include "NetworkMonitor/TaskbarOverlay.h"
+#include "NetworkMonitor/Utils.h"
+#include <dwmapi.h>
+
+#pragma comment(lib, "Dwmapi.lib")
+
+namespace NetworkMonitor
+{
+
+TaskbarOverlay::TaskbarOverlay()
+    : m_hInstance(nullptr)
+    , m_hwnd(nullptr)
+    , m_hTaskbar(nullptr)
+    , m_isVisible(false)
+    , m_initialized(false)
+    , m_timerId(0)
+    , m_downloadSpeed(0.0)
+    , m_uploadSpeed(0.0)
+    , m_displayUnit(SpeedUnit::KiloBytesPerSecond)
+{
+}
+
+TaskbarOverlay::~TaskbarOverlay()
+{
+    Cleanup();
+}
+
+bool TaskbarOverlay::Initialize(HINSTANCE hInstance)
+{
+    if (m_initialized)
+    {
+        return true;
+    }
+
+    m_hInstance = hInstance;
+
+    if (!RegisterWindowClass(hInstance))
+    {
+        return false;
+    }
+
+    if (!CreateOverlayWindow(hInstance))
+    {
+        return false;
+    }
+
+    m_hTaskbar = FindWindowW(L"Shell_TrayWnd", nullptr);
+    
+    PositionOnTaskbar();
+
+    // Start timer - 150ms for checking visibility and position
+    m_timerId = SetTimer(m_hwnd, TIMER_CHECK_VISIBILITY, 150, nullptr);
+
+    m_initialized = true;
+    return true;
+}
+
+void TaskbarOverlay::Cleanup()
+{
+    if (m_hwnd && m_timerId)
+    {
+        KillTimer(m_hwnd, TIMER_CHECK_VISIBILITY);
+        m_timerId = 0;
+    }
+
+    if (m_hwnd)
+    {
+        DestroyWindow(m_hwnd);
+        m_hwnd = nullptr;
+    }
+
+    if (m_hInstance)
+    {
+        UnregisterClassW(WINDOW_CLASS_NAME, m_hInstance);
+        m_hInstance = nullptr;
+    }
+
+    m_initialized = false;
+}
+
+void TaskbarOverlay::UpdateSpeed(double downloadSpeed, double uploadSpeed, SpeedUnit unit)
+{
+    m_downloadSpeed = downloadSpeed;
+    m_uploadSpeed = uploadSpeed;
+    m_displayUnit = unit;
+
+    if (m_hwnd && m_isVisible)
+    {
+        InvalidateRect(m_hwnd, nullptr, FALSE);
+    }
+}
+
+void TaskbarOverlay::Show(bool show)
+{
+    if (!m_hwnd)
+    {
+        return;
+    }
+
+    m_isVisible = show;
+    
+    if (show)
+    {
+        ForceShow();
+    }
+    else
+    {
+        ShowWindow(m_hwnd, SW_HIDE);
+    }
+}
+
+void TaskbarOverlay::SetRightClickCallback(std::function<void()> callback)
+{
+    m_rightClickCallback = callback;
+}
+
+bool TaskbarOverlay::RegisterWindowClass(HINSTANCE hInstance)
+{
+    WNDCLASSEXW wc = { 0 };
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = WINDOW_CLASS_NAME;
+    wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hbrBackground = nullptr;
+
+    if (!RegisterClassExW(&wc))
+    {
+        ShowErrorMessage(L"Failed to register taskbar overlay window class");
+        return false;
+    }
+
+    return true;
+}
+
+bool TaskbarOverlay::CreateOverlayWindow(HINSTANCE hInstance)
+{
+    // Create with WS_EX_TRANSPARENT for click-through
+    m_hwnd = CreateWindowExW(
+        WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT,
+        WINDOW_CLASS_NAME,
+        L"NetworkMonitor Overlay",
+        WS_POPUP | WS_VISIBLE,
+        0, 0, WINDOW_WIDTH, WINDOW_HEIGHT,
+        nullptr, nullptr, hInstance, this
+    );
+
+    if (!m_hwnd)
+    {
+        ShowErrorMessage(L"Failed to create taskbar overlay window");
+        return false;
+    }
+
+    // Set transparency - RGB(1,1,1) is transparent color key
+    SetLayeredWindowAttributes(m_hwnd, RGB(1, 1, 1), 0, LWA_COLORKEY);
+
+    return true;
+}
+
+void TaskbarOverlay::PositionOnTaskbar()
+{
+    if (!m_hwnd)
+    {
+        return;
+    }
+
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    
+    HWND hTaskbar = FindWindowW(L"Shell_TrayWnd", nullptr);
+    if (!hTaskbar)
+    {
+        // Fallback: bottom-right corner
+        int x = screenWidth - WINDOW_WIDTH - 60;
+        int y = screenHeight - WINDOW_HEIGHT - 7;
+        SetWindowPos(m_hwnd, HWND_TOPMOST, x, y, WINDOW_WIDTH, WINDOW_HEIGHT,
+                     SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        return;
+    }
+
+    // Get taskbar rect
+    RECT taskbarRect;
+    GetWindowRect(hTaskbar, &taskbarRect);
+    int taskbarHeight = taskbarRect.bottom - taskbarRect.top;
+
+    // Find notification area (system tray)
+    HWND hTrayNotify = FindWindowExW(hTaskbar, nullptr, L"TrayNotifyWnd", nullptr);
+    
+    int x, y;
+    int dynamicGap = 10; // Default gap
+    
+    if (hTrayNotify)
+    {
+        RECT trayRect;
+        GetWindowRect(hTrayNotify, &trayRect);
+        
+        // Try to find chevron button ("^" overflow button)
+        HWND hChevron = FindWindowExW(hTrayNotify, nullptr, L"Button", nullptr);
+        
+        if (hChevron && IsWindowVisible(hChevron))
+        {
+            // Chevron is visible - position right before it
+            RECT chevronRect;
+            GetWindowRect(hChevron, &chevronRect);
+            
+            // Position with safe gap from chevron
+            x = chevronRect.left - WINDOW_WIDTH - 8; // 8px gap
+        }
+        else
+        {
+            // Chevron is hidden or not found - use tray left edge
+            // Calculate dynamic gap based on tray width
+            int trayWidth = trayRect.right - trayRect.left;
+            
+            // If tray is narrow, chevron is likely hidden - use smaller gap
+            // If tray is wide, chevron might appear - use larger gap
+            dynamicGap = (trayWidth < 80) ? 5 : 12;
+            
+            x = trayRect.left - WINDOW_WIDTH - dynamicGap;
+        }
+        
+        // Center vertically in taskbar
+        y = taskbarRect.top + ((taskbarHeight - WINDOW_HEIGHT) / 2);
+        
+        // Safety bounds check
+        if (x < 0)
+        {
+            x = 10;
+        }
+    }
+    else
+    {
+        // Fallback if tray not found
+        x = screenWidth - WINDOW_WIDTH - 180;
+        y = taskbarRect.top + ((taskbarHeight - WINDOW_HEIGHT) / 2);
+    }
+
+    // Check if position needs update
+    RECT currentRect;
+    GetWindowRect(m_hwnd, &currentRect);
+    
+    int currentX = currentRect.left;
+    int currentY = currentRect.top;
+    
+    // Only update position if it has changed significantly (more than 5 pixels)
+    if (abs(currentX - x) > 5 || abs(currentY - y) > 5)
+    {
+        SetWindowPos(m_hwnd, HWND_TOPMOST, x, y, WINDOW_WIDTH, WINDOW_HEIGHT,
+                     SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    }
+}
+
+bool TaskbarOverlay::GetTaskbarInfo(RECT& rect, UINT& edge)
+{
+    if (!m_hTaskbar)
+    {
+        return false;
+    }
+
+    GetWindowRect(m_hTaskbar, &rect);
+
+    APPBARDATA abd = { 0 };
+    abd.cbSize = sizeof(APPBARDATA);
+    abd.hWnd = m_hTaskbar;
+
+    if (SHAppBarMessage(ABM_GETTASKBARPOS, &abd))
+    {
+        edge = abd.uEdge;
+        return true;
+    }
+
+    // Fallback: detect based on position
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    if (rect.bottom >= screenHeight - 10)
+    {
+        edge = ABE_BOTTOM;
+    }
+    else if (rect.top <= 10)
+    {
+        edge = ABE_TOP;
+    }
+    else if (rect.left <= 10)
+    {
+        edge = ABE_LEFT;
+    }
+    else
+    {
+        edge = ABE_RIGHT;
+    }
+
+    return true;
+}
+
+void TaskbarOverlay::ForceShow()
+{
+    if (!m_hwnd || !m_isVisible)
+    {
+        return;
+    }
+
+    // Multiple strategies to ensure window stays visible
+    
+    // 1. Show window
+    ShowWindow(m_hwnd, SW_SHOWNOACTIVATE);
+    
+    // 2. Force to topmost
+    SetWindowPos(m_hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    
+    // 3. Update position (in case taskbar moved)
+    PositionOnTaskbar();
+    
+    // 4. Invalidate to force repaint
+    InvalidateRect(m_hwnd, nullptr, TRUE);
+    UpdateWindow(m_hwnd);
+}
+
+LRESULT CALLBACK TaskbarOverlay::WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    TaskbarOverlay* pThis = nullptr;
+
+    if (message == WM_CREATE)
+    {
+        CREATESTRUCTW* pCreate = reinterpret_cast<CREATESTRUCTW*>(lParam);
+        pThis = reinterpret_cast<TaskbarOverlay*>(pCreate->lpCreateParams);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
+        return 0;
+    }
+    else
+    {
+        pThis = reinterpret_cast<TaskbarOverlay*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+    }
+
+    if (pThis)
+    {
+        switch (message)
+        {
+            case WM_TIMER:
+            {
+                if (wParam == TIMER_CHECK_VISIBILITY)
+                {
+                    // Check if window should be visible but isn't
+                    if (pThis->m_isVisible)
+                    {
+                        BOOL isVisible = IsWindowVisible(hwnd);
+                        
+                        if (!isVisible)
+                        {
+                            // Window is hidden but should be visible - force show
+                            pThis->ForceShow();
+                        }
+                        else
+                        {
+                            // Window is visible - check position and update if needed
+                            pThis->PositionOnTaskbar();
+                            
+                            // Ensure topmost
+                            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                        }
+                    }
+                }
+                return 0;
+            }
+
+            case WM_MOUSEACTIVATE:
+            {
+                // Prevent window from being activated
+                return MA_NOACTIVATE;
+            }
+
+            case WM_NCACTIVATE:
+            {
+                // Keep window visible but don't activate
+                return TRUE;
+            }
+
+            case WM_ACTIVATE:
+            {
+                // Don't activate
+                return 0;
+            }
+
+            case WM_PAINT:
+            {
+                pThis->OnPaint();
+                return 0;
+            }
+
+            case WM_RBUTTONUP:
+            {
+                pThis->OnRightButtonUp();
+                return 0;
+            }
+
+            case WM_DISPLAYCHANGE:
+            case WM_SETTINGCHANGE:
+            case WM_WINDOWPOSCHANGING:
+            case WM_WINDOWPOSCHANGED:
+            {
+                // Reposition when display or window position changes
+                pThis->OnDisplayChange();
+                return 0;
+            }
+
+            case WM_DESTROY:
+            {
+                return 0;
+            }
+        }
+    }
+
+    return DefWindowProcW(hwnd, message, wParam, lParam);
+}
+
+void TaskbarOverlay::OnPaint()
+{
+    PAINTSTRUCT ps;
+    HDC hdc = BeginPaint(m_hwnd, &ps);
+
+    RECT rect;
+    GetClientRect(m_hwnd, &rect);
+
+    // Create memory DC for double buffering
+    HDC hdcMem = CreateCompatibleDC(hdc);
+    HBITMAP hbmMem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+    HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
+
+    // Fill with RGB(1,1,1) - this will be transparent
+    HBRUSH hBrush = CreateSolidBrush(RGB(1, 1, 1));
+    FillRect(hdcMem, &rect, hBrush);
+    DeleteObject(hBrush);
+
+    // Set transparent text background
+    SetBkMode(hdcMem, TRANSPARENT);
+
+    // Create font
+    HFONT hFont = CreateFontW(
+        13,                          // Height
+        0,                           // Width
+        0,                           // Escapement
+        0,                           // Orientation
+        FW_NORMAL,                   // Weight
+        FALSE,                       // Italic
+        FALSE,                       // Underline
+        FALSE,                       // StrikeOut
+        DEFAULT_CHARSET,             // CharSet
+        OUT_DEFAULT_PRECIS,          // OutPrecision
+        CLIP_DEFAULT_PRECIS,         // ClipPrecision
+        CLEARTYPE_QUALITY,           // Quality
+        DEFAULT_PITCH | FF_DONTCARE, // PitchAndFamily
+        L"Segoe UI"                  // FaceName
+    );
+
+    HFONT hOldFont = (HFONT)SelectObject(hdcMem, hFont);
+
+    // Format speeds
+    std::wstring downStr = FormatSpeed(m_downloadSpeed, m_displayUnit);
+    std::wstring upStr = FormatSpeed(m_uploadSpeed, m_displayUnit);
+    
+    // Create 2 lines with "Down:" and "Up:"
+    std::wstring line1 = L"Down: " + downStr;
+    std::wstring line2 = L"Up: " + upStr;
+
+    // Calculate line positions
+    int lineHeight = 16;
+    int startY = (rect.bottom - (lineHeight * 2)) / 2;
+
+    RECT line1Rect = {5, startY, rect.right - 5, startY + lineHeight};
+    RECT line2Rect = {5, startY + lineHeight, rect.right - 5, startY + lineHeight * 2};
+
+    // Draw Download line - GREEN color
+    SetTextColor(hdcMem, RGB(50, 255, 100));
+    DrawTextW(hdcMem, line1.c_str(), -1, &line1Rect,
+              DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+
+    // Draw Upload line - ORANGE color
+    SetTextColor(hdcMem, RGB(255, 180, 50));
+    DrawTextW(hdcMem, line2.c_str(), -1, &line2Rect,
+              DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+
+    // Copy to screen
+    BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
+
+    // Cleanup
+    SelectObject(hdcMem, hOldFont);
+    SelectObject(hdcMem, hbmOld);
+    DeleteObject(hFont);
+    DeleteObject(hbmMem);
+    DeleteDC(hdcMem);
+
+    EndPaint(m_hwnd, &ps);
+}
+
+void TaskbarOverlay::OnRightButtonUp()
+{
+    if (m_rightClickCallback)
+    {
+        m_rightClickCallback();
+    }
+}
+
+void TaskbarOverlay::OnDisplayChange()
+{
+    PositionOnTaskbar();
+}
+
+} // namespace NetworkMonitor
