@@ -257,6 +257,11 @@ bool InitializeApplication(HINSTANCE hInstance)
         g_config = NetworkMonitor::AppConfig();
     }
 
+    if (g_config.historyAutoTrimDays > 0)
+    {
+        NetworkMonitor::HistoryLogger::Instance().TrimToRecentDays(g_config.historyAutoTrimDays);
+    }
+
     // Create tray icon
     g_pTrayIcon = new NetworkMonitor::TrayIcon();
     if (!g_pTrayIcon->Initialize(g_hwnd))
@@ -824,6 +829,60 @@ void PopulateSettingsDialog(HWND hDlg)
 
     CheckDlgButton(hDlg, IDC_AUTOSTART_CHECK, g_config.autoStart ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_ENABLE_LOGGING_CHECK, g_config.enableLogging ? BST_CHECKED : BST_UNCHECKED);
+
+    HWND hHistoryTrim = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
+    if (hHistoryTrim)
+    {
+        struct TrimOption
+        {
+            UINT days;
+            UINT resourceId;
+        };
+
+        const TrimOption options[] = {
+            {0,   IDS_HISTORY_AUTO_TRIM_NONE},
+            {7,   IDS_HISTORY_AUTO_TRIM_7D},
+            {30,  IDS_HISTORY_AUTO_TRIM_30D},
+            {90,  IDS_HISTORY_AUTO_TRIM_90D},
+            {365, IDS_HISTORY_AUTO_TRIM_365D},
+        };
+
+        int selectedIndex = -1;
+        for (const auto& option : options)
+        {
+            std::wstring label = NetworkMonitor::LoadStringResource(option.resourceId);
+            if (label.empty())
+            {
+                if (option.days == 0)
+                {
+                    label = L"Do not auto delete";
+                }
+                else
+                {
+                    wchar_t buffer[64] = {0};
+                    swprintf_s(buffer, L"Keep last %u days", option.days);
+                    label = buffer;
+                }
+            }
+
+            int index = static_cast<int>(SendMessageW(hHistoryTrim, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str())));
+            SendMessageW(hHistoryTrim, CB_SETITEMDATA, index, option.days);
+
+            if (static_cast<UINT>(g_config.historyAutoTrimDays) == option.days)
+            {
+                selectedIndex = index;
+            }
+        }
+
+        if (selectedIndex >= 0)
+        {
+            SendMessageW(hHistoryTrim, CB_SETCURSEL, selectedIndex, 0);
+        }
+        else
+        {
+            SendMessageW(hHistoryTrim, CB_SETCURSEL, 0, 0);
+        }
+    }
 }
 
 bool ApplySettingsFromDialog(HWND hDlg)
@@ -833,6 +892,7 @@ bool ApplySettingsFromDialog(HWND hDlg)
     auto newUnit = g_config.displayUnit;
     bool newAutoStart = g_config.autoStart;
     std::wstring newInterface = g_config.selectedInterface;
+    int newHistoryAutoTrimDays = g_config.historyAutoTrimDays;
 
     HWND hInterval = GetDlgItem(hDlg, IDC_UPDATE_INTERVAL_COMBO);
     int sel = static_cast<int>(SendMessageW(hInterval, CB_GETCURSEL, 0, 0));
@@ -867,13 +927,29 @@ bool ApplySettingsFromDialog(HWND hDlg)
         }
     }
 
+    HWND hHistoryTrim = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
+    if (hHistoryTrim)
+    {
+        int selTrim = static_cast<int>(SendMessageW(hHistoryTrim, CB_GETCURSEL, 0, 0));
+        if (selTrim != CB_ERR)
+        {
+            LRESULT days = SendMessageW(hHistoryTrim, CB_GETITEMDATA, selTrim, 0);
+            if (days != CB_ERR)
+            {
+                newHistoryAutoTrimDays = static_cast<int>(days);
+            }
+        }
+    }
+
     needsTimerUpdate = (newInterval != g_config.updateInterval);
+    bool historyChanged = (newHistoryAutoTrimDays != g_config.historyAutoTrimDays);
 
     g_config.updateInterval = newInterval;
     g_config.displayUnit = newUnit;
     g_config.autoStart = newAutoStart;
     g_config.enableLogging = newEnableLogging;
     g_config.selectedInterface = newInterface;
+    g_config.historyAutoTrimDays = newHistoryAutoTrimDays;
 
     g_pConfigManager->SaveConfig(g_config);
 
@@ -881,6 +957,11 @@ bool ApplySettingsFromDialog(HWND hDlg)
     {
         KillTimer(g_hwnd, TIMER_UPDATE_NETWORK);
         SetTimer(g_hwnd, TIMER_UPDATE_NETWORK, g_config.updateInterval, nullptr);
+    }
+
+    if (historyChanged && g_config.historyAutoTrimDays > 0)
+    {
+        NetworkMonitor::HistoryLogger::Instance().TrimToRecentDays(g_config.historyAutoTrimDays);
     }
 
     // Force immediate refresh so UI reflects new settings

@@ -54,6 +54,8 @@ constexpr UINT UPDATE_INTERVAL_SLOW = 5000;      // 5 seconds
 
 // Default Settings
 constexpr UINT DEFAULT_UPDATE_INTERVAL = UPDATE_INTERVAL_NORMAL;
+constexpr int DEFAULT_HISTORY_AUTO_TRIM_DAYS = 0;
+constexpr int MAX_HISTORY_AUTO_TRIM_DAYS = 365;
 
 // Message IDs
 #define WM_TRAYICON (WM_USER + 1)
@@ -136,6 +138,7 @@ struct AppConfig
     bool showUploadSpeed;            // Show upload speed
     bool showDownloadSpeed;          // Show download speed
     bool enableLogging;              // Enable history logging
+    int historyAutoTrimDays;
     std::wstring selectedInterface;  // Selected interface name (empty = all)
 
     AppConfig()
@@ -145,6 +148,7 @@ struct AppConfig
         , showUploadSpeed(true)
         , showDownloadSpeed(true)
         , enableLogging(true)
+        , historyAutoTrimDays(DEFAULT_HISTORY_AUTO_TRIM_DAYS)
         , selectedInterface(L"")
     {
     }

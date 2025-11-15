@@ -103,6 +103,11 @@ BEGIN
     IDS_HISTORY_CONFIRM_TRIM_30      "Delete all records older than 30 days?"
     IDS_HISTORY_CONFIRM_TRIM_90      "Delete all records older than 90 days?"
     IDS_HISTORY_ERROR_OPERATION      "Failed to modify history database."
+    IDS_HISTORY_AUTO_TRIM_NONE       "Do not auto delete"
+    IDS_HISTORY_AUTO_TRIM_7D         "Keep last 7 days"
+    IDS_HISTORY_AUTO_TRIM_30D        "Keep last 30 days"
+    IDS_HISTORY_AUTO_TRIM_90D        "Keep last 90 days"
+    IDS_HISTORY_AUTO_TRIM_365D       "Keep last 365 days"
 END
 
 // ============================================================================
@@ -183,6 +188,8 @@ BEGIN
     GROUPBOX        "Network Interface",IDC_STATIC,7,123,286,40
     LTEXT           "Monitor:",IDC_STATIC,15,141,70,8
     COMBOBOX        IDC_INTERFACE_COMBO,90,139,190,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Auto delete older than:",IDC_STATIC,15,153,90,8
+    COMBOBOX        IDC_HISTORY_AUTO_TRIM_COMBO,110,151,80,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 
     CONTROL         "Start with Windows",IDC_AUTOSTART_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,168,120,10
     CONTROL         "Enable history logging",IDC_ENABLE_LOGGING_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,150,168,130,10

@@ -95,6 +95,11 @@
 #define IDS_HISTORY_CONFIRM_TRIM_30     442
 #define IDS_HISTORY_CONFIRM_TRIM_90     443
 #define IDS_HISTORY_ERROR_OPERATION     444
+#define IDS_HISTORY_AUTO_TRIM_NONE      445
+#define IDS_HISTORY_AUTO_TRIM_7D        446
+#define IDS_HISTORY_AUTO_TRIM_30D       447
+#define IDS_HISTORY_AUTO_TRIM_90D       448
+#define IDS_HISTORY_AUTO_TRIM_365D      449
 
 // ============================================================================
 // CONTROL IDS (for dialogs)
@@ -118,6 +123,7 @@
 #define IDC_HISTORY_KEEP_30             515
 #define IDC_HISTORY_KEEP_90             516
 #define IDC_HISTORY_MANAGE              517
+#define IDC_HISTORY_AUTO_TRIM_COMBO     518
 
 // ============================================================================
 // STANDARD DIALOG IDS
