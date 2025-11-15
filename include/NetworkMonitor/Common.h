@@ -98,6 +98,14 @@ enum class SpeedUnit
     MegaBitsPerSecond   // Mbps
 };
 
+// Application UI language
+enum class AppLanguage
+{
+    SystemDefault = 0,
+    English = 1,
+    Vietnamese = 2
+};
+
 // Network statistics for a single interface
 struct NetworkStats
 {
@@ -139,6 +147,7 @@ struct AppConfig
     bool showDownloadSpeed;          // Show download speed
     bool enableLogging;              // Enable history logging
     int historyAutoTrimDays;
+    AppLanguage language;            // UI language
     std::wstring selectedInterface;  // Selected interface name (empty = all)
 
     AppConfig()
@@ -149,6 +158,7 @@ struct AppConfig
         , showDownloadSpeed(true)
         , enableLogging(true)
         , historyAutoTrimDays(DEFAULT_HISTORY_AUTO_TRIM_DAYS)
+        , language(AppLanguage::SystemDefault)
         , selectedInterface(L"")
     {
     }

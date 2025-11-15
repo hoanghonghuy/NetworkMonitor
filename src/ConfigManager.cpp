@@ -40,6 +40,12 @@ bool ConfigManager::LoadConfig(AppConfig& config)
     {
         config.historyAutoTrimDays = MAX_HISTORY_AUTO_TRIM_DAYS;
     }
+    DWORD langValue = ReadDWORD(hKey, L"Language", static_cast<DWORD>(AppLanguage::SystemDefault));
+    if (langValue > static_cast<DWORD>(AppLanguage::Vietnamese))
+    {
+        langValue = static_cast<DWORD>(AppLanguage::SystemDefault);
+    }
+    config.language = static_cast<AppLanguage>(langValue);
     config.selectedInterface = ReadString(hKey, L"SelectedInterface", L"");
     config.autoStart = IsAutoStartEnabled();
 
@@ -72,6 +78,7 @@ bool ConfigManager::SaveConfig(const AppConfig& config)
         trimDays = MAX_HISTORY_AUTO_TRIM_DAYS;
     }
     success &= WriteDWORD(hKey, L"HistoryAutoTrimDays", static_cast<DWORD>(trimDays));
+    success &= WriteDWORD(hKey, L"Language", static_cast<DWORD>(config.language));
     success &= WriteString(hKey, L"SelectedInterface", config.selectedInterface);
 
     // Save auto-start setting

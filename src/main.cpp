@@ -59,6 +59,7 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 void ShowHistoryManageDialog(HWND parent);
 INT_PTR CALLBACK HistoryManageDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 void DrawDashboardChart(HDC hdc, const RECT& rc);
+void ApplyLanguageFromConfig();
 
 // ============================================================================
 // WINMAIN - APPLICATION ENTRY POINT
@@ -124,6 +125,32 @@ int WINAPI WinMain(
     }
 
     return static_cast<int>(msg.wParam);
+}
+
+void ApplyLanguageFromConfig()
+{
+    LANGID langId = 0;
+
+    switch (g_config.language)
+    {
+    case NetworkMonitor::AppLanguage::English:
+        langId = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+        break;
+
+    case NetworkMonitor::AppLanguage::Vietnamese:
+        langId = MAKELANGID(LANG_VIETNAMESE, SUBLANG_VIETNAMESE_VIETNAM);
+        break;
+
+    case NetworkMonitor::AppLanguage::SystemDefault:
+    default:
+        langId = GetUserDefaultUILanguage();
+        break;
+    }
+
+    if (langId != 0)
+    {
+        SetThreadUILanguage(langId);
+    }
 }
 
 // ============================================================================
@@ -258,6 +285,9 @@ bool InitializeApplication(HINSTANCE hInstance)
         // Use default config if load fails
         g_config = NetworkMonitor::AppConfig();
     }
+
+    // Apply UI language preference (for STRINGTABLE resources)
+    ApplyLanguageFromConfig();
 
     if (g_config.historyAutoTrimDays > 0)
     {
@@ -541,6 +571,39 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
     {
         CenterDialogOnScreen(hDlg);
 
+        // Localize dashboard caption and static labels
+        std::wstring dashTitle = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_TITLE);
+        if (!dashTitle.empty())
+        {
+            SetWindowTextW(hDlg, dashTitle.c_str());
+        }
+
+        std::wstring todayLabel = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_LABEL_TODAY);
+        if (!todayLabel.empty())
+        {
+            SetDlgItemTextW(hDlg, IDC_DASHBOARD_LABEL_TODAY, todayLabel.c_str());
+        }
+
+        std::wstring monthLabel = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_LABEL_THIS_MONTH);
+        if (!monthLabel.empty())
+        {
+            SetDlgItemTextW(hDlg, IDC_DASHBOARD_LABEL_MONTH, monthLabel.c_str());
+        }
+
+        std::wstring dlLabel = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_LABEL_DOWNLOAD);
+        if (!dlLabel.empty())
+        {
+            SetDlgItemTextW(hDlg, IDC_DASHBOARD_LABEL_DOWNLOAD_T, dlLabel.c_str());
+            SetDlgItemTextW(hDlg, IDC_DASHBOARD_LABEL_DOWNLOAD_M, dlLabel.c_str());
+        }
+
+        std::wstring ulLabel = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_LABEL_UPLOAD);
+        if (!ulLabel.empty())
+        {
+            SetDlgItemTextW(hDlg, IDC_DASHBOARD_LABEL_UPLOAD_T, ulLabel.c_str());
+            SetDlgItemTextW(hDlg, IDC_DASHBOARD_LABEL_UPLOAD_M, ulLabel.c_str());
+        }
+
         // Initialize list columns once
         HWND hList = GetDlgItem(hDlg, IDC_RECENT_LIST);
         if (hList)
@@ -751,8 +814,8 @@ void DrawDashboardChart(HDC hdc, const RECT& rc)
     unsigned long long maxValue = 0;
     for (const auto& s : samples)
     {
-        maxValue = std::max(maxValue, s.bytesDown);
-        maxValue = std::max(maxValue, s.bytesUp);
+        maxValue = (std::max)(maxValue, s.bytesDown);
+        maxValue = (std::max)(maxValue, s.bytesUp);
     }
 
     if (maxValue == 0)
@@ -889,6 +952,49 @@ INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
 
 void PopulateSettingsDialog(HWND hDlg)
 {
+    // Localize Settings dialog caption and group/label texts
+    std::wstring settingsTitle = NetworkMonitor::LoadStringResource(IDS_SETTINGS_TITLE);
+    if (!settingsTitle.empty())
+    {
+        SetWindowTextW(hDlg, settingsTitle.c_str());
+    }
+
+    std::wstring generalGroup = NetworkMonitor::LoadStringResource(IDS_SETTINGS_GROUP_GENERAL);
+    if (!generalGroup.empty())
+    {
+        SetDlgItemTextW(hDlg, IDC_SETTINGS_GROUP_GENERAL, generalGroup.c_str());
+    }
+
+    std::wstring updateGroup = NetworkMonitor::LoadStringResource(IDS_SETTINGS_GROUP_UPDATE);
+    if (!updateGroup.empty())
+    {
+        SetDlgItemTextW(hDlg, IDC_SETTINGS_GROUP_UPDATE, updateGroup.c_str());
+    }
+
+    std::wstring networkGroup = NetworkMonitor::LoadStringResource(IDS_SETTINGS_GROUP_NETWORK);
+    if (!networkGroup.empty())
+    {
+        SetDlgItemTextW(hDlg, IDC_SETTINGS_GROUP_NETWORK, networkGroup.c_str());
+    }
+
+    std::wstring langLabel = NetworkMonitor::LoadStringResource(IDS_SETTINGS_LABEL_LANGUAGE);
+    if (!langLabel.empty())
+    {
+        SetDlgItemTextW(hDlg, IDC_SETTINGS_LABEL_LANGUAGE, langLabel.c_str());
+    }
+
+    std::wstring intervalLabel = NetworkMonitor::LoadStringResource(IDS_SETTINGS_LABEL_INTERVAL);
+    if (!intervalLabel.empty())
+    {
+        SetDlgItemTextW(hDlg, IDC_SETTINGS_LABEL_INTERVAL, intervalLabel.c_str());
+    }
+
+    std::wstring monitorLabel = NetworkMonitor::LoadStringResource(IDS_SETTINGS_LABEL_MONITOR);
+    if (!monitorLabel.empty())
+    {
+        SetDlgItemTextW(hDlg, IDC_SETTINGS_LABEL_MONITOR, monitorLabel.c_str());
+    }
+
     HWND hInterval = GetDlgItem(hDlg, IDC_UPDATE_INTERVAL_COMBO);
     struct IntervalOption
     {
@@ -979,6 +1085,63 @@ void PopulateSettingsDialog(HWND hDlg)
     CheckDlgButton(hDlg, IDC_AUTOSTART_CHECK, g_config.autoStart ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_ENABLE_LOGGING_CHECK, g_config.enableLogging ? BST_CHECKED : BST_UNCHECKED);
 
+    HWND hLanguage = GetDlgItem(hDlg, IDC_LANGUAGE_COMBO);
+    if (hLanguage)
+    {
+        struct LanguageOption
+        {
+            NetworkMonitor::AppLanguage language;
+            UINT resourceId;
+        };
+
+        const LanguageOption langs[] = {
+            {NetworkMonitor::AppLanguage::SystemDefault, IDS_LANGUAGE_SYSTEM},
+            {NetworkMonitor::AppLanguage::English,       IDS_LANGUAGE_ENGLISH},
+            {NetworkMonitor::AppLanguage::Vietnamese,    IDS_LANGUAGE_VIETNAMESE},
+        };
+
+        int selectedIndex = -1;
+        for (const auto& option : langs)
+        {
+            std::wstring label = NetworkMonitor::LoadStringResource(option.resourceId);
+            if (label.empty())
+            {
+                switch (option.language)
+                {
+                case NetworkMonitor::AppLanguage::SystemDefault:
+                    label = L"System (Windows default)";
+                    break;
+                case NetworkMonitor::AppLanguage::English:
+                    label = L"English";
+                    break;
+                case NetworkMonitor::AppLanguage::Vietnamese:
+                    label = L"Tiếng Việt";
+                    break;
+                default:
+                    label = L"Unknown";
+                    break;
+                }
+            }
+
+            int index = static_cast<int>(SendMessageW(hLanguage, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str())));
+            SendMessageW(hLanguage, CB_SETITEMDATA, index, static_cast<WPARAM>(option.language));
+
+            if (g_config.language == option.language)
+            {
+                selectedIndex = index;
+            }
+        }
+
+        if (selectedIndex >= 0)
+        {
+            SendMessageW(hLanguage, CB_SETCURSEL, selectedIndex, 0);
+        }
+        else
+        {
+            SendMessageW(hLanguage, CB_SETCURSEL, 0, 0);
+        }
+    }
+
     HWND hHistoryTrim = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
     if (hHistoryTrim)
     {
@@ -1042,6 +1205,7 @@ bool ApplySettingsFromDialog(HWND hDlg)
     bool newAutoStart = g_config.autoStart;
     std::wstring newInterface = g_config.selectedInterface;
     int newHistoryAutoTrimDays = g_config.historyAutoTrimDays;
+    auto newLanguage = g_config.language;
 
     HWND hInterval = GetDlgItem(hDlg, IDC_UPDATE_INTERVAL_COMBO);
     int sel = static_cast<int>(SendMessageW(hInterval, CB_GETCURSEL, 0, 0));
@@ -1090,8 +1254,23 @@ bool ApplySettingsFromDialog(HWND hDlg)
         }
     }
 
+    HWND hLanguage = GetDlgItem(hDlg, IDC_LANGUAGE_COMBO);
+    if (hLanguage)
+    {
+        int selLang = static_cast<int>(SendMessageW(hLanguage, CB_GETCURSEL, 0, 0));
+        if (selLang != CB_ERR)
+        {
+            LRESULT langVal = SendMessageW(hLanguage, CB_GETITEMDATA, selLang, 0);
+            if (langVal != CB_ERR)
+            {
+                newLanguage = static_cast<NetworkMonitor::AppLanguage>(langVal);
+            }
+        }
+    }
+
     needsTimerUpdate = (newInterval != g_config.updateInterval);
     bool historyChanged = (newHistoryAutoTrimDays != g_config.historyAutoTrimDays);
+    bool languageChanged = (newLanguage != g_config.language);
 
     g_config.updateInterval = newInterval;
     g_config.displayUnit = newUnit;
@@ -1099,6 +1278,7 @@ bool ApplySettingsFromDialog(HWND hDlg)
     g_config.enableLogging = newEnableLogging;
     g_config.selectedInterface = newInterface;
     g_config.historyAutoTrimDays = newHistoryAutoTrimDays;
+    g_config.language = newLanguage;
 
     g_pConfigManager->SaveConfig(g_config);
 
@@ -1111,6 +1291,11 @@ bool ApplySettingsFromDialog(HWND hDlg)
     if (historyChanged && g_config.historyAutoTrimDays > 0)
     {
         NetworkMonitor::HistoryLogger::Instance().TrimToRecentDays(g_config.historyAutoTrimDays);
+    }
+
+    if (languageChanged)
+    {
+        ApplyLanguageFromConfig();
     }
 
     // Force immediate refresh so UI reflects new settings
@@ -1198,10 +1383,34 @@ INT_PTR CALLBACK HistoryManageDialogProc(HWND hDlg, UINT message, WPARAM wParam,
     {
         CenterDialogOnScreen(hDlg);
 
-        std::wstring title = NetworkMonitor::LoadStringResource(IDS_HISTORY_MANAGE_TITLE);
+        std::wstring title = NetworkMonitor::LoadStringResource(IDS_HISTORY_DIALOG_TITLE);
         if (!title.empty())
         {
             SetWindowTextW(hDlg, title.c_str());
+        }
+
+        std::wstring opsLabel = NetworkMonitor::LoadStringResource(IDS_HISTORY_LABEL_OPERATIONS);
+        if (!opsLabel.empty())
+        {
+            SetDlgItemTextW(hDlg, IDC_HISTORY_LABEL_OPERATIONS, opsLabel.c_str());
+        }
+
+        std::wstring btnDelete = NetworkMonitor::LoadStringResource(IDS_HISTORY_BUTTON_DELETE_ALL);
+        if (!btnDelete.empty())
+        {
+            SetDlgItemTextW(hDlg, IDC_HISTORY_DELETE_ALL, btnDelete.c_str());
+        }
+
+        std::wstring btn30 = NetworkMonitor::LoadStringResource(IDS_HISTORY_BUTTON_KEEP_30);
+        if (!btn30.empty())
+        {
+            SetDlgItemTextW(hDlg, IDC_HISTORY_KEEP_30, btn30.c_str());
+        }
+
+        std::wstring btn90 = NetworkMonitor::LoadStringResource(IDS_HISTORY_BUTTON_KEEP_90);
+        if (!btn90.empty())
+        {
+            SetDlgItemTextW(hDlg, IDC_HISTORY_KEEP_90, btn90.c_str());
         }
 
         return TRUE;

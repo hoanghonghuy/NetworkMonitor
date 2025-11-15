@@ -156,6 +156,8 @@ void TrayIcon::UpdateIcon(double downloadSpeed, double uploadSpeed)
 
 bool TrayIcon::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam)
 {
+    UNREFERENCED_PARAMETER(wParam);
+
     if (message != WM_TRAYICON)
     {
         return false;
@@ -313,7 +315,7 @@ HMENU TrayIcon::CreateContextMenu(const AppConfig& config, bool overlayVisible)
 HICON TrayIcon::LoadAppIcon()
 {
     // Try to load icon from resource
-    HICON hIcon = LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APPLICATION));
+    HICON hIcon = LoadIconW(nullptr, IDI_APPLICATION);
     
     if (hIcon == nullptr)
     {

@@ -108,7 +108,114 @@ BEGIN
     IDS_HISTORY_AUTO_TRIM_30D        "Keep last 30 days"
     IDS_HISTORY_AUTO_TRIM_90D        "Keep last 90 days"
     IDS_HISTORY_AUTO_TRIM_365D       "Keep last 365 days"
+    IDS_LANGUAGE_SYSTEM              "System (Windows default)"
+    IDS_LANGUAGE_ENGLISH             "English"
+    IDS_LANGUAGE_VIETNAMESE          "Tiếng Việt"
+    IDS_SETTINGS_TITLE               "NetworkMonitor Settings"
+    IDS_SETTINGS_GROUP_GENERAL       "General"
+    IDS_SETTINGS_GROUP_UPDATE        "Update && Display"
+    IDS_SETTINGS_GROUP_NETWORK       "Network && History"
+    IDS_SETTINGS_LABEL_LANGUAGE      "Language:"
+    IDS_SETTINGS_LABEL_AUTOSTART     "Start with Windows"
+    IDS_SETTINGS_LABEL_LOGGING       "Enable history logging"
+    IDS_SETTINGS_LABEL_INTERVAL      "Update Interval:"
+    IDS_SETTINGS_LABEL_SPEED_UNIT    "Speed Unit:"
+    IDS_SETTINGS_LABEL_MONITOR       "Monitor:"
+    IDS_SETTINGS_LABEL_AUTOTRIM      "Auto delete older than:"
+    IDS_DASHBOARD_TITLE              "Network Usage Dashboard"
+    IDS_DASHBOARD_LABEL_TODAY        "Today:"
+    IDS_DASHBOARD_LABEL_THIS_MONTH   "This month:"
+    IDS_DASHBOARD_LABEL_DOWNLOAD     "Download:"
+    IDS_DASHBOARD_LABEL_UPLOAD       "Upload:"
+    IDS_HISTORY_DIALOG_TITLE         "Manage History"
+    IDS_HISTORY_LABEL_OPERATIONS     "History operations:"
+    IDS_HISTORY_BUTTON_DELETE_ALL    "Delete all history"
+    IDS_HISTORY_BUTTON_KEEP_30       "Keep last 30 days"
+    IDS_HISTORY_BUTTON_KEEP_90       "Keep last 90 days"
 END
+
+// Vietnamese resources
+LANGUAGE LANG_VIETNAMESE, SUBLANG_VIETNAMESE_VIETNAM
+
+STRINGTABLE
+BEGIN
+    IDS_APP_TITLE                    "NetworkMonitor"
+    IDS_ERROR_INIT                   "Không thể khởi tạo NetworkMonitor"
+    IDS_ERROR_NETWORK                "Không truy cập được các giao diện mạng"
+    IDS_ERROR_ALREADY_RUNNING        "NetworkMonitor đang chạy rồi!"
+    IDS_ERR_REGISTER_WINDOW_CLASS    "Không thể đăng ký lớp cửa sổ"
+    IDS_ERR_CREATE_WINDOW            "Không thể tạo cửa sổ"
+    IDS_ERR_INIT_TRAY_ICON           "Không thể khởi tạo biểu tượng khay hệ thống"
+    IDS_ERR_INIT_TASKBAR_OVERLAY     "Không thể khởi tạo hiển thị trên taskbar"
+    IDS_ERR_START_NETWORK_MONITOR    "Không thể bắt đầu giám sát mạng"
+    IDS_ERR_LOAD_APP_ICON            "Không thể tải biểu tượng ứng dụng"
+    IDS_ERR_CREATE_TRAY_ICON         "Không thể tạo biểu tượng khay hệ thống"
+    IDS_MENU_UPDATE_INTERVAL         "Chu kỳ cập nhật"
+    IDS_MENU_UPDATE_FAST             "Nhanh (1s)"
+    IDS_MENU_UPDATE_NORMAL           "Bình thường (2s)"
+    IDS_MENU_UPDATE_SLOW             "Chậm (5s)"
+    IDS_MENU_AUTOSTART               "Khởi động cùng Windows"
+    IDS_MENU_TASKBAR_OVERLAY         "Hiển thị trên taskbar"
+    IDS_MENU_SETTINGS                "Cài đặt..."
+    IDS_MENU_DASHBOARD               "Bảng theo dõi..."
+    IDS_MENU_ABOUT                   "Giới thiệu..."
+    IDS_MENU_EXIT                    "Thoát"
+    IDS_DASHBOARD_COL_TIME           "Thời gian"
+    IDS_DASHBOARD_COL_INTERFACE      "Giao diện"
+    IDS_DASHBOARD_COL_DOWN           "Tải xuống"
+    IDS_DASHBOARD_COL_UP             "Tải lên"
+    IDS_INTERVAL_FAST                "Nhanh (1s)"
+    IDS_INTERVAL_NORMAL              "Bình thường (2s)"
+    IDS_INTERVAL_SLOW                "Chậm (5s)"
+    IDS_UNIT_BYTES_PER_SECOND        "Byte mỗi giây"
+    IDS_UNIT_KILOBYTES_PER_SECOND    "Kilobyte mỗi giây"
+    IDS_UNIT_MEGABYTES_PER_SECOND    "Megabyte mỗi giây"
+    IDS_UNIT_MEGABITS_PER_SECOND     "Megabit mỗi giây"
+    IDS_ALL_INTERFACES               "Tất cả giao diện"
+    IDS_AGGREGATED_STATS             "Tổng hợp thống kê"
+    IDS_OVERLAY_DOWN_PREFIX          "Tải xuống: "
+    IDS_OVERLAY_UP_PREFIX            "Tải lên: "
+    IDS_ABOUT_TITLE                  "Giới thiệu NetworkMonitor"
+    IDS_ABOUT_VERSION_LABEL          "Phiên bản: "
+    IDS_ABOUT_BODY                   "Công cụ giám sát lưu lượng mạng nhẹ cho Windows.\nHiển thị tốc độ tải xuống / tải lên theo thời gian thực ở khay hệ thống và taskbar."
+    IDS_HISTORY_MANAGE_TITLE         "Quản lý lịch sử"
+    IDS_HISTORY_CONFIRM_DELETE_ALL   "Việc này sẽ xóa toàn bộ lịch sử đã ghi. Bạn có chắc không?"
+    IDS_HISTORY_CONFIRM_TRIM_30      "Xóa tất cả bản ghi cũ hơn 30 ngày?"
+    IDS_HISTORY_CONFIRM_TRIM_90      "Xóa tất cả bản ghi cũ hơn 90 ngày?"
+    IDS_HISTORY_ERROR_OPERATION      "Không thể thay đổi cơ sở dữ liệu lịch sử."
+    IDS_HISTORY_AUTO_TRIM_NONE       "Không tự động xóa"
+    IDS_HISTORY_AUTO_TRIM_7D         "Giữ 7 ngày gần nhất"
+    IDS_HISTORY_AUTO_TRIM_30D        "Giữ 30 ngày gần nhất"
+    IDS_HISTORY_AUTO_TRIM_90D        "Giữ 90 ngày gần nhất"
+    IDS_HISTORY_AUTO_TRIM_365D       "Giữ 365 ngày gần nhất"
+    IDS_LANGUAGE_SYSTEM              "Theo hệ thống (Windows)"
+    IDS_LANGUAGE_ENGLISH             "English"
+    IDS_LANGUAGE_VIETNAMESE          "Tiếng Việt"
+    IDS_SETTINGS_TITLE               "Cài đặt NetworkMonitor"
+    IDS_SETTINGS_GROUP_GENERAL       "Chung"
+    IDS_SETTINGS_GROUP_UPDATE        "Cập nhật && Hiển thị"
+    IDS_SETTINGS_GROUP_NETWORK       "Mạng && Lịch sử"
+    IDS_SETTINGS_LABEL_LANGUAGE      "Ngôn ngữ:"
+    IDS_SETTINGS_LABEL_AUTOSTART     "Khởi động cùng Windows"
+    IDS_SETTINGS_LABEL_LOGGING       "Bật ghi lịch sử"
+    IDS_SETTINGS_LABEL_INTERVAL      "Chu kỳ cập nhật:"
+    IDS_SETTINGS_LABEL_SPEED_UNIT    "Đơn vị tốc độ:"
+    IDS_SETTINGS_LABEL_MONITOR       "Theo dõi:"
+    IDS_SETTINGS_LABEL_AUTOTRIM      "Tự xóa cũ hơn:"
+    IDS_DASHBOARD_TITLE              "Bảng theo dõi lưu lượng"
+    IDS_DASHBOARD_LABEL_TODAY        "Hôm nay:"
+    IDS_DASHBOARD_LABEL_THIS_MONTH   "Tháng này:"
+    IDS_DASHBOARD_LABEL_DOWNLOAD     "Tải xuống:"
+    IDS_DASHBOARD_LABEL_UPLOAD       "Tải lên:"
+    IDS_HISTORY_DIALOG_TITLE         "Quản lý lịch sử"
+    IDS_HISTORY_LABEL_OPERATIONS     "Thao tác lịch sử:"
+    IDS_HISTORY_BUTTON_DELETE_ALL    "Xóa toàn bộ lịch sử"
+    IDS_HISTORY_BUTTON_KEEP_30       "Giữ 30 ngày gần nhất"
+    IDS_HISTORY_BUTTON_KEEP_90       "Giữ 90 ngày gần nhất"
+END
+
+// Switch back to English for the rest of resources
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 // ============================================================================
 // VERSION INFORMATION
@@ -177,22 +284,26 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSM
 CAPTION "NetworkMonitor Settings"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    GROUPBOX        "Update Settings",IDC_STATIC,7,7,286,50
-    LTEXT           "Update Interval:",IDC_STATIC,15,25,70,8
-    COMBOBOX        IDC_UPDATE_INTERVAL_COMBO,90,23,100,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    
-    GROUPBOX        "Display Settings",IDC_STATIC,7,65,286,50
-    LTEXT           "Speed Unit:",IDC_STATIC,15,83,70,8
-    COMBOBOX        IDC_DISPLAY_UNIT_COMBO,90,81,100,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    
-    GROUPBOX        "Network Interface",IDC_STATIC,7,123,286,40
-    LTEXT           "Monitor:",IDC_STATIC,15,141,70,8
-    COMBOBOX        IDC_INTERFACE_COMBO,90,139,190,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Auto delete older than:",IDC_STATIC,15,153,90,8
-    COMBOBOX        IDC_HISTORY_AUTO_TRIM_COMBO,110,151,80,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    // General
+    GROUPBOX        "General",IDC_SETTINGS_GROUP_GENERAL,7,7,286,55
+    LTEXT           "Language:",IDC_SETTINGS_LABEL_LANGUAGE,15,22,50,8
+    COMBOBOX        IDC_LANGUAGE_COMBO,70,20,100,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Start with Windows",IDC_AUTOSTART_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,185,20,100,10
+    CONTROL         "Enable history logging",IDC_ENABLE_LOGGING_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,185,35,110,10
 
-    CONTROL         "Start with Windows",IDC_AUTOSTART_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,168,120,10
-    CONTROL         "Enable history logging",IDC_ENABLE_LOGGING_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,150,168,130,10
+    // Update & Display
+    GROUPBOX        "Update && Display",IDC_SETTINGS_GROUP_UPDATE,7,67,286,50
+    LTEXT           "Update Interval:",IDC_SETTINGS_LABEL_INTERVAL,15,83,70,8
+    COMBOBOX        IDC_UPDATE_INTERVAL_COMBO,90,81,80,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Speed Unit:",IDC_STATIC,180,83,60,8
+    COMBOBOX        IDC_DISPLAY_UNIT_COMBO,240,81,40,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    // Network & History
+    GROUPBOX        "Network && History",IDC_SETTINGS_GROUP_NETWORK,7,123,286,40
+    LTEXT           "Monitor:",IDC_SETTINGS_LABEL_MONITOR,15,139,50,8
+    COMBOBOX        IDC_INTERFACE_COMBO,65,137,120,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Auto delete older than:",IDC_STATIC,190,139,90,8
+    COMBOBOX        IDC_HISTORY_AUTO_TRIM_COMBO,190,151,80,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 
     DEFPUSHBUTTON   "OK",IDOK,135,180,60,14
     PUSHBUTTON      "Cancel",IDCANCEL,200,180,60,14
@@ -203,20 +314,22 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSM
 CAPTION "Network Usage Dashboard"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    LTEXT           "Today:",IDC_STATIC,7,7,60,8
-    LTEXT           "Download:",IDC_STATIC,15,20,50,8
+    // Today (left)
+    LTEXT           "Today:",IDC_DASHBOARD_LABEL_TODAY,7,7,60,8
+    LTEXT           "Download:",IDC_DASHBOARD_LABEL_DOWNLOAD_T,15,20,50,8
     LTEXT           "",IDC_TODAY_DOWN,70,20,120,8
-    LTEXT           "Upload:",IDC_STATIC,15,33,50,8
+    LTEXT           "Upload:",IDC_DASHBOARD_LABEL_UPLOAD_T,15,33,50,8
     LTEXT           "",IDC_TODAY_UP,70,33,120,8
 
-    LTEXT           "This month:",IDC_STATIC,7,50,60,8
-    LTEXT           "Download:",IDC_STATIC,15,63,50,8
-    LTEXT           "",IDC_MONTH_DOWN,70,63,120,8
-    LTEXT           "Upload:",IDC_STATIC,15,76,50,8
-    LTEXT           "",IDC_MONTH_UP,70,76,120,8
+    // This month (right, same band)
+    LTEXT           "This month:",IDC_DASHBOARD_LABEL_MONTH,170,7,60,8
+    LTEXT           "Download:",IDC_DASHBOARD_LABEL_DOWNLOAD_M,178,20,50,8
+    LTEXT           "",IDC_MONTH_DOWN,225,20,90,8
+    LTEXT           "Upload:",IDC_DASHBOARD_LABEL_UPLOAD_M,178,33,50,8
+    LTEXT           "",IDC_MONTH_UP,225,33,90,8
 
-    CONTROL         "",IDC_DASHBOARD_CHART,"STATIC",SS_OWNERDRAW | WS_CHILD | WS_VISIBLE | WS_BORDER,7,95,306,50
-    CONTROL         "",IDC_RECENT_LIST,"SysListView32",WS_TABSTOP | WS_BORDER | WS_VSCROLL | WS_HSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS,7,148,306,47
+    CONTROL         "",IDC_DASHBOARD_CHART,"STATIC",SS_OWNERDRAW | WS_CHILD | WS_VISIBLE | WS_BORDER,7,50,306,60
+    CONTROL         "",IDC_RECENT_LIST,"SysListView32",WS_TABSTOP | WS_BORDER | WS_VSCROLL | WS_HSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS,7,115,306,80
     PUSHBUTTON      "Manage history...",IDC_HISTORY_MANAGE,110,200,76,14
     PUSHBUTTON      "Refresh",IDC_DASHBOARD_REFRESH,195,200,58,14
     DEFPUSHBUTTON   "Close",IDOK,255,200,58,14
@@ -227,7 +340,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSM
 CAPTION "Manage History"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    LTEXT           "History operations:",IDC_STATIC,7,7,200,8
+    LTEXT           "History operations:",IDC_HISTORY_LABEL_OPERATIONS,7,7,200,8
     PUSHBUTTON      "Delete all history",IDC_HISTORY_DELETE_ALL,7,24,90,14
     PUSHBUTTON      "Keep last 30 days",IDC_HISTORY_KEEP_30,7,42,90,14
     PUSHBUTTON      "Keep last 90 days",IDC_HISTORY_KEEP_90,7,60,90,14
