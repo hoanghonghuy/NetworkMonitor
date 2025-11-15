@@ -37,10 +37,37 @@ bool TrayIcon::Initialize(HWND hwnd)
 
     m_hwnd = hwnd;
 
-    // Load icons
+    // Load icons from application resources
+    HINSTANCE hInstance = GetModuleHandleW(nullptr);
+
+    // Idle icon (default tray icon)
     m_iconIdle = LoadAppIcon();
-    m_iconActive = m_iconIdle;   // Use same icon for now
-    m_iconHigh = m_iconIdle;     // Use same icon for now
+
+    // Active icon
+    m_iconActive = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_ACTIVE),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+    if (!m_iconActive)
+    {
+        m_iconActive = m_iconIdle;
+    }
+
+    // High traffic icon
+    m_iconHigh = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_HIGH),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+    if (!m_iconHigh)
+    {
+        m_iconHigh = m_iconIdle;
+    }
 
     if (m_iconIdle == nullptr)
     {
@@ -314,12 +341,32 @@ HMENU TrayIcon::CreateContextMenu(const AppConfig& config, bool overlayVisible)
 
 HICON TrayIcon::LoadAppIcon()
 {
-    // Try to load icon from resource
-    HICON hIcon = LoadIconW(nullptr, IDI_APPLICATION);
-    
-    if (hIcon == nullptr)
+    HINSTANCE hInstance = GetModuleHandleW(nullptr);
+
+    // Try to load the application's tray idle icon first
+    HICON hIcon = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_IDLE),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+
+    if (!hIcon)
     {
-        // Fallback to default application icon
+        // Fallback to main app icon
+        hIcon = static_cast<HICON>(LoadImageW(
+            hInstance,
+            MAKEINTRESOURCEW(IDI_APP_ICON),
+            IMAGE_ICON,
+            GetSystemMetrics(SM_CXSMICON),
+            GetSystemMetrics(SM_CYSMICON),
+            LR_DEFAULTCOLOR));
+    }
+
+    if (!hIcon)
+    {
+        // Final fallback to default system application icon
         hIcon = LoadIconW(nullptr, IDI_APPLICATION);
     }
 

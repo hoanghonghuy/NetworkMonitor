@@ -16,17 +16,16 @@
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 // ============================================================================
-// ICON RESOURCES - COMMENTED OUT TEMPORARILY
+// ICON RESOURCES
 // ============================================================================
 
-// TODO: Add proper .ICO files later
-// Main application icon (displayed in Explorer)
-// IDI_APP_ICON            ICON    "icons/app_icon.ico"
+// Main application icon (displayed in Explorer, taskbar, Alt+Tab)
+IDI_APP_ICON            ICON    "icons/app_icon.ico"
 
 // Tray icons for different states
-// IDI_TRAY_IDLE           ICON    "icons/tray_idle.ico"
-// IDI_TRAY_ACTIVE         ICON    "icons/tray_active.ico"
-// IDI_TRAY_HIGH           ICON    "icons/tray_high.ico"
+IDI_TRAY_IDLE           ICON    "icons/tray_idle.ico"
+IDI_TRAY_ACTIVE         ICON    "icons/tray_active.ico"
+IDI_TRAY_HIGH           ICON    "icons/tray_high.ico"
 
 // ============================================================================
 // MENU RESOURCES
