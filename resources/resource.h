@@ -124,6 +124,7 @@
 #define IDC_HISTORY_KEEP_90             516
 #define IDC_HISTORY_MANAGE              517
 #define IDC_HISTORY_AUTO_TRIM_COMBO     518
+#define IDC_DASHBOARD_CHART             519
 
 // ============================================================================
 // STANDARD DIALOG IDS

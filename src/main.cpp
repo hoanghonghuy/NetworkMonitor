@@ -17,6 +17,7 @@
 #include <commctrl.h>
 #include <vector>
 #include <limits>
+#include <algorithm>
 
 // ============================================================================
 // GLOBAL VARIABLES
@@ -57,6 +58,7 @@ void ShowDashboardDialog(HWND parent);
 INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 void ShowHistoryManageDialog(HWND parent);
 INT_PTR CALLBACK HistoryManageDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+void DrawDashboardChart(HDC hdc, const RECT& rc);
 
 // ============================================================================
 // WINMAIN - APPLICATION ENTRY POINT
@@ -598,6 +600,17 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
         return TRUE;
     }
 
+    case WM_DRAWITEM:
+    {
+        LPDRAWITEMSTRUCT dis = reinterpret_cast<LPDRAWITEMSTRUCT>(lParam);
+        if (dis && dis->CtlID == IDC_DASHBOARD_CHART)
+        {
+            DrawDashboardChart(dis->hDC, dis->rcItem);
+            return TRUE;
+        }
+        break;
+    }
+
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
@@ -680,6 +693,12 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
                 ListView_SetColumnWidth(hList, 2, LVSCW_AUTOSIZE_USEHEADER);
                 ListView_SetColumnWidth(hList, 3, LVSCW_AUTOSIZE_USEHEADER);
             }
+
+            HWND hChart = GetDlgItem(hDlg, IDC_DASHBOARD_CHART);
+            if (hChart)
+            {
+                InvalidateRect(hChart, nullptr, TRUE);
+            }
             return TRUE;
         }
 
@@ -700,6 +719,136 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
     }
 
     return FALSE;
+}
+
+void DrawDashboardChart(HDC hdc, const RECT& rc)
+{
+    if (!hdc)
+    {
+        return;
+    }
+
+    HBRUSH backBrush = CreateSolidBrush(GetSysColor(COLOR_WINDOW));
+    FillRect(hdc, &rc, backBrush);
+    DeleteObject(backBrush);
+
+    NetworkMonitor::HistoryLogger& logger = NetworkMonitor::HistoryLogger::Instance();
+    const std::wstring* ifaceFilter = nullptr;
+    if (!g_config.selectedInterface.empty())
+    {
+        ifaceFilter = &g_config.selectedInterface;
+    }
+
+    std::vector<NetworkMonitor::HistorySample> samples;
+    logger.GetRecentSamples(100, samples, ifaceFilter, true);
+
+    if (samples.empty())
+    {
+        Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
+        return;
+    }
+
+    unsigned long long maxValue = 0;
+    for (const auto& s : samples)
+    {
+        maxValue = std::max(maxValue, s.bytesDown);
+        maxValue = std::max(maxValue, s.bytesUp);
+    }
+
+    if (maxValue == 0)
+    {
+        Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
+        return;
+    }
+
+    RECT inner = rc;
+    inner.left += 4;
+    inner.right -= 4;
+    inner.top += 4;
+    inner.bottom -= 4;
+
+    HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
+    HPEN oldPen = (HPEN)SelectObject(hdc, borderPen);
+    Rectangle(hdc, inner.left, inner.top, inner.right, inner.bottom);
+
+    int width = inner.right - inner.left;
+    int height = inner.bottom - inner.top;
+    size_t count = samples.size();
+
+    if (count == 0 || width <= 0 || height <= 0)
+    {
+        SelectObject(hdc, oldPen);
+        DeleteObject(borderPen);
+        return;
+    }
+
+    auto getX = [&](size_t index) -> int {
+        if (count <= 1)
+        {
+            return inner.left + width / 2;
+        }
+        return inner.left + static_cast<int>((static_cast<double>(index) * static_cast<double>(width - 1)) / static_cast<double>(count - 1));
+    };
+
+    auto getY = [&](unsigned long long value) -> int {
+        double ratio = static_cast<double>(value) / static_cast<double>(maxValue);
+        if (ratio < 0.0)
+        {
+            ratio = 0.0;
+        }
+        if (ratio > 1.0)
+        {
+            ratio = 1.0;
+        }
+        return inner.bottom - static_cast<int>(ratio * static_cast<double>(height));
+    };
+
+    std::vector<POINT> downPoints;
+    std::vector<POINT> upPoints;
+    downPoints.reserve(count);
+    upPoints.reserve(count);
+
+    for (size_t i = 0; i < count; ++i)
+    {
+        const auto& s = samples[count - 1 - i];
+        POINT pd;
+        pd.x = getX(i);
+        pd.y = getY(s.bytesDown);
+        downPoints.push_back(pd);
+
+        POINT pu;
+        pu.x = pd.x;
+        pu.y = getY(s.bytesUp);
+        upPoints.push_back(pu);
+    }
+
+    HPEN downPen = CreatePen(PS_SOLID, 1, RGB(0, 128, 0));
+    HPEN upPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 200));
+
+    SelectObject(hdc, downPen);
+    if (!downPoints.empty())
+    {
+        MoveToEx(hdc, downPoints[0].x, downPoints[0].y, nullptr);
+        for (size_t i = 1; i < downPoints.size(); ++i)
+        {
+            LineTo(hdc, downPoints[i].x, downPoints[i].y);
+        }
+    }
+
+    SelectObject(hdc, upPen);
+    if (!upPoints.empty())
+    {
+        MoveToEx(hdc, upPoints[0].x, upPoints[0].y, nullptr);
+        for (size_t i = 1; i < upPoints.size(); ++i)
+        {
+            LineTo(hdc, upPoints[i].x, upPoints[i].y);
+        }
+    }
+
+    SelectObject(hdc, oldPen);
+    DeleteObject(borderPen);
+    DeleteObject(downPen);
+    DeleteObject(upPen);
 }
 
 void ShowSettingsDialog(HWND parent)
