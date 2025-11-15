@@ -10,7 +10,10 @@
 #include "NetworkMonitor/ConfigManager.h"
 #include "NetworkMonitor/TaskbarOverlay.h"
 #include "NetworkMonitor/Utils.h"
+#include "../resources/resource.h"
 #include <windows.h>
+#include <windowsx.h>
+#include <vector>
 
 // ============================================================================
 // GLOBAL VARIABLES
@@ -22,6 +25,7 @@ NetworkMonitor::ConfigManager* g_pConfigManager = nullptr;
 NetworkMonitor::TaskbarOverlay* g_pTaskbarOverlay = nullptr;  // THÊM MỚI
 NetworkMonitor::AppConfig g_config;
 HWND g_hwnd = nullptr;
+HINSTANCE g_hInstance = nullptr;
 
 // ============================================================================
 // FORWARD DECLARATIONS
@@ -34,6 +38,13 @@ void OnTimer();
 void OnMenuCommand(UINT menuId);
 void ShowAboutDialog(HWND hwnd);
 void OnTaskbarOverlayRightClick();  // THÊM MỚI
+void ShowSettingsDialog(HWND parent);
+INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+void PopulateSettingsDialog(HWND hDlg);
+bool ApplySettingsFromDialog(HWND hDlg);
+void PopulateInterfaceCombo(HWND hDlg);
+NetworkMonitor::NetworkStats GetSelectedNetworkStats();
+void CenterDialogOnScreen(HWND hDlg);
 
 // ============================================================================
 // WINMAIN - APPLICATION ENTRY POINT
@@ -48,6 +59,8 @@ int WINAPI WinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
     UNREFERENCED_PARAMETER(nCmdShow);
+
+    g_hInstance = hInstance;
 
     // Check if another instance is already running
     HANDLE hMutex = CreateMutexW(nullptr, TRUE, L"NetworkMonitor_SingleInstance");
@@ -143,6 +156,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         default:
             return DefWindowProc(hwnd, message, wParam, lParam);
     }
+}
+
+void CenterDialogOnScreen(HWND hDlg)
+{
+    RECT rc = {0};
+    if (!GetWindowRect(hDlg, &rc))
+    {
+        return;
+    }
+
+    int dlgWidth = rc.right - rc.left;
+    int dlgHeight = rc.bottom - rc.top;
+
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+    int posX = (screenWidth - dlgWidth) / 2;
+    int posY = (screenHeight - dlgHeight) / 2;
+
+    SetWindowPos(hDlg, nullptr, posX, posY, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 }
 
 // ============================================================================
@@ -286,8 +319,24 @@ void OnTimer()
     // Update network statistics
     g_pNetworkMonitor->Update();
 
-    // Get aggregated stats
-    NetworkMonitor::NetworkStats stats = g_pNetworkMonitor->GetAggregatedStats();
+    NetworkMonitor::NetworkStats stats;
+    bool useSpecificInterface = !g_config.selectedInterface.empty();
+    if (useSpecificInterface)
+    {
+        NetworkMonitor::NetworkStats selectedStats;
+        if (g_pNetworkMonitor->GetInterfaceStats(g_config.selectedInterface, selectedStats))
+        {
+            stats = selectedStats;
+        }
+        else
+        {
+            stats = g_pNetworkMonitor->GetAggregatedStats();
+        }
+    }
+    else
+    {
+        stats = g_pNetworkMonitor->GetAggregatedStats();
+    }
 
     // Update tray icon
     if (g_pTrayIcon)
@@ -351,7 +400,7 @@ void OnMenuCommand(UINT menuId)
             break;
 
         case IDM_SETTINGS:
-            MessageBoxW(g_hwnd, L"Settings dialog not implemented yet", APP_NAME, MB_OK | MB_ICONINFORMATION);
+            ShowSettingsDialog(g_hwnd);
             break;
 
         case IDM_ABOUT:
@@ -374,6 +423,177 @@ void OnTaskbarOverlayRightClick()
     if (g_pTrayIcon)
     {
         g_pTrayIcon->ShowContextMenu();
+    }
+}
+
+void ShowSettingsDialog(HWND parent)
+{
+    DialogBoxParamW(g_hInstance, MAKEINTRESOURCEW(IDD_SETTINGS_DIALOG), parent, SettingsDialogProc, 0);
+}
+
+INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+
+    switch (message)
+    {
+    case WM_INITDIALOG:
+        PopulateSettingsDialog(hDlg);
+        CenterDialogOnScreen(hDlg);
+        return TRUE;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+            if (ApplySettingsFromDialog(hDlg))
+            {
+                EndDialog(hDlg, IDOK);
+            }
+            return TRUE;
+
+        case IDCANCEL:
+            EndDialog(hDlg, IDCANCEL);
+            return TRUE;
+        }
+        break;
+    }
+
+    return FALSE;
+}
+
+void PopulateSettingsDialog(HWND hDlg)
+{
+    HWND hInterval = GetDlgItem(hDlg, IDC_UPDATE_INTERVAL_COMBO);
+    struct IntervalOption
+    {
+        const wchar_t* label;
+        UINT interval;
+    };
+
+    const IntervalOption intervals[] = {
+        {L"Fast (1s)", UPDATE_INTERVAL_FAST},
+        {L"Normal (2s)", UPDATE_INTERVAL_NORMAL},
+        {L"Slow (5s)", UPDATE_INTERVAL_SLOW},
+    };
+
+    for (const auto& option : intervals)
+    {
+        int index = static_cast<int>(SendMessageW(hInterval, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(option.label)));
+        SendMessageW(hInterval, CB_SETITEMDATA, index, option.interval);
+        if (g_config.updateInterval == option.interval)
+        {
+            SendMessageW(hInterval, CB_SETCURSEL, index, 0);
+        }
+    }
+
+    HWND hUnit = GetDlgItem(hDlg, IDC_DISPLAY_UNIT_COMBO);
+    struct UnitOption { const wchar_t* label; NetworkMonitor::SpeedUnit unit; };
+    const UnitOption units[] = {
+        {L"Bytes per second", NetworkMonitor::SpeedUnit::BytesPerSecond},
+        {L"Kilobytes per second", NetworkMonitor::SpeedUnit::KiloBytesPerSecond},
+        {L"Megabytes per second", NetworkMonitor::SpeedUnit::MegaBytesPerSecond},
+        {L"Megabits per second", NetworkMonitor::SpeedUnit::MegaBitsPerSecond},
+    };
+
+    for (const auto& option : units)
+    {
+        int index = static_cast<int>(SendMessageW(hUnit, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(option.label)));
+        SendMessageW(hUnit, CB_SETITEMDATA, index, static_cast<WPARAM>(option.unit));
+        if (g_config.displayUnit == option.unit)
+        {
+            SendMessageW(hUnit, CB_SETCURSEL, index, 0);
+        }
+    }
+
+    PopulateInterfaceCombo(hDlg);
+
+    CheckDlgButton(hDlg, IDC_AUTOSTART_CHECK, g_config.autoStart ? BST_CHECKED : BST_UNCHECKED);
+}
+
+bool ApplySettingsFromDialog(HWND hDlg)
+{
+    bool needsTimerUpdate = false;
+    UINT newInterval = g_config.updateInterval;
+    auto newUnit = g_config.displayUnit;
+    bool newAutoStart = g_config.autoStart;
+    std::wstring newInterface = g_config.selectedInterface;
+
+    HWND hInterval = GetDlgItem(hDlg, IDC_UPDATE_INTERVAL_COMBO);
+    int sel = static_cast<int>(SendMessageW(hInterval, CB_GETCURSEL, 0, 0));
+    if (sel != CB_ERR)
+    {
+        newInterval = static_cast<UINT>(SendMessageW(hInterval, CB_GETITEMDATA, sel, 0));
+    }
+
+    HWND hUnit = GetDlgItem(hDlg, IDC_DISPLAY_UNIT_COMBO);
+    sel = static_cast<int>(SendMessageW(hUnit, CB_GETCURSEL, 0, 0));
+    if (sel != CB_ERR)
+    {
+        newUnit = static_cast<NetworkMonitor::SpeedUnit>(SendMessageW(hUnit, CB_GETITEMDATA, sel, 0));
+    }
+
+    newAutoStart = (IsDlgButtonChecked(hDlg, IDC_AUTOSTART_CHECK) == BST_CHECKED);
+
+    HWND hInterface = GetDlgItem(hDlg, IDC_INTERFACE_COMBO);
+    sel = static_cast<int>(SendMessageW(hInterface, CB_GETCURSEL, 0, 0));
+    if (sel != CB_ERR)
+    {
+        wchar_t buffer[256] = {0};
+        SendMessageW(hInterface, CB_GETLBTEXT, sel, reinterpret_cast<LPARAM>(buffer));
+        if (sel == 0)
+        {
+            newInterface.clear();
+        }
+        else
+        {
+            newInterface = buffer;
+        }
+    }
+
+    needsTimerUpdate = (newInterval != g_config.updateInterval);
+
+    g_config.updateInterval = newInterval;
+    g_config.displayUnit = newUnit;
+    g_config.autoStart = newAutoStart;
+    g_config.selectedInterface = newInterface;
+
+    g_pConfigManager->SaveConfig(g_config);
+
+    if (needsTimerUpdate)
+    {
+        KillTimer(g_hwnd, TIMER_UPDATE_NETWORK);
+        SetTimer(g_hwnd, TIMER_UPDATE_NETWORK, g_config.updateInterval, nullptr);
+    }
+
+    // Force immediate refresh so UI reflects new settings
+    OnTimer();
+
+    return true;
+}
+
+void PopulateInterfaceCombo(HWND hDlg)
+{
+    HWND hInterface = GetDlgItem(hDlg, IDC_INTERFACE_COMBO);
+    SendMessageW(hInterface, CB_RESETCONTENT, 0, 0);
+
+    int index = static_cast<int>(SendMessageW(hInterface, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"All Interfaces")));
+    if (g_config.selectedInterface.empty())
+    {
+        SendMessageW(hInterface, CB_SETCURSEL, index, 0);
+    }
+
+    if (g_pNetworkMonitor)
+    {
+        std::vector<NetworkMonitor::NetworkStats> stats = g_pNetworkMonitor->GetAllStats();
+        for (const auto& item : stats)
+        {
+            int addedIndex = static_cast<int>(SendMessageW(hInterface, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(item.interfaceName.c_str())));
+            if (item.interfaceName == g_config.selectedInterface)
+            {
+                SendMessageW(hInterface, CB_SETCURSEL, addedIndex, 0);
+            }
+        }
     }
 }
 
