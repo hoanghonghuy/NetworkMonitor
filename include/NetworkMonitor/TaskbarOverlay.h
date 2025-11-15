@@ -115,7 +115,8 @@ private:
 
 private:
     static constexpr const wchar_t* WINDOW_CLASS_NAME = L"NetworkMonitorTaskbarOverlay";
-    static constexpr int WINDOW_WIDTH = 95;
+    // Extra width so strings like "99999.99 KB/s" remain fully visible
+    static constexpr int WINDOW_WIDTH = 110;
     static constexpr int WINDOW_HEIGHT = 36;
     static constexpr int TASKBAR_MARGIN = 5;
     static constexpr UINT TIMER_CHECK_VISIBILITY = 1001;
