@@ -64,6 +64,7 @@ set(HEADER_FILES
     include/NetworkMonitor/ConfigManager.h
     include/NetworkMonitor/TrayIcon.h
     include/NetworkMonitor/TaskbarOverlay.h
+    include/NetworkMonitor/HistoryLogger.h
 )
 
 # Source files
@@ -75,6 +76,8 @@ set(SOURCE_FILES
     src/ConfigManager.cpp
     src/TrayIcon.cpp
     src/TaskbarOverlay.cpp
+    src/HistoryLogger.cpp
+    third_party/sqlite/sqlite3.c
 )
 
 # Resource files
@@ -103,6 +106,7 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite
 )
 
 # ============================================================================

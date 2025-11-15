@@ -10,10 +10,12 @@
 #include "NetworkMonitor/ConfigManager.h"
 #include "NetworkMonitor/TaskbarOverlay.h"
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/HistoryLogger.h"
 #include "../resources/resource.h"
 #include <windows.h>
 #include <windowsx.h>
 #include <vector>
+#include <limits>
 
 // ============================================================================
 // GLOBAL VARIABLES
@@ -26,6 +28,11 @@ NetworkMonitor::TaskbarOverlay* g_pTaskbarOverlay = nullptr;  // THÊM MỚI
 NetworkMonitor::AppConfig g_config;
 HWND g_hwnd = nullptr;
 HINSTANCE g_hInstance = nullptr;
+
+// Previous totals for logging per-interval usage
+unsigned long long g_prevTotalBytesDown = 0;
+unsigned long long g_prevTotalBytesUp = 0;
+bool g_prevTotalsValid = false;
 
 // ============================================================================
 // FORWARD DECLARATIONS
@@ -336,6 +343,57 @@ void OnTimer()
     else
     {
         stats = g_pNetworkMonitor->GetAggregatedStats();
+    }
+
+    // ---------------------------------------------------------------------
+    // History logging: record per-interval usage into SQLite (if available)
+    // ---------------------------------------------------------------------
+    unsigned long long totalDown = static_cast<unsigned long long>(stats.bytesReceived);
+    unsigned long long totalUp   = static_cast<unsigned long long>(stats.bytesSent);
+
+    if (!g_prevTotalsValid)
+    {
+        g_prevTotalBytesDown = totalDown;
+        g_prevTotalBytesUp = totalUp;
+        g_prevTotalsValid = true;
+    }
+    else
+    {
+        const unsigned long long MAX_VAL = (std::numeric_limits<unsigned long long>::max)();
+
+        unsigned long long deltaDown = 0;
+        unsigned long long deltaUp = 0;
+
+        if (totalDown >= g_prevTotalBytesDown)
+        {
+            deltaDown = totalDown - g_prevTotalBytesDown;
+        }
+        else
+        {
+            // Counter wrapped
+            deltaDown = (MAX_VAL - g_prevTotalBytesDown) + totalDown + 1;
+        }
+
+        if (totalUp >= g_prevTotalBytesUp)
+        {
+            deltaUp = totalUp - g_prevTotalBytesUp;
+        }
+        else
+        {
+            deltaUp = (MAX_VAL - g_prevTotalBytesUp) + totalUp + 1;
+        }
+
+        if (deltaDown > 0 || deltaUp > 0)
+        {
+            NetworkMonitor::HistoryLogger::Instance().AppendSample(
+                stats.interfaceName.empty() ? std::wstring(L"All Interfaces") : stats.interfaceName,
+                deltaDown,
+                deltaUp
+            );
+        }
+
+        g_prevTotalBytesDown = totalDown;
+        g_prevTotalBytesUp = totalUp;
     }
 
     // Update tray icon
