@@ -46,6 +46,7 @@ BEGIN
         MENUITEM "Start with &Windows",    IDM_AUTOSTART
         MENUITEM SEPARATOR
         MENUITEM "&Settings...",            IDM_SETTINGS
+        MENUITEM "&Dashboard...",           IDM_DASHBOARD
         MENUITEM "&About...",               IDM_ABOUT
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                   IDM_EXIT
@@ -146,4 +147,25 @@ BEGIN
     
     DEFPUSHBUTTON   "OK",IDOK,135,180,60,14
     PUSHBUTTON      "Cancel",IDCANCEL,200,180,60,14
+END
+
+IDD_DASHBOARD_DIALOG DIALOGEX 0, 0, 320, 220
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Network Usage Dashboard"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Today:",IDC_STATIC,7,7,60,8
+    LTEXT           "Download:",IDC_STATIC,15,20,50,8
+    LTEXT           "",IDC_TODAY_DOWN,70,20,120,8
+    LTEXT           "Upload:",IDC_STATIC,15,33,50,8
+    LTEXT           "",IDC_TODAY_UP,70,33,120,8
+
+    LTEXT           "This month:",IDC_STATIC,7,50,60,8
+    LTEXT           "Download:",IDC_STATIC,15,63,50,8
+    LTEXT           "",IDC_MONTH_DOWN,70,63,120,8
+    LTEXT           "Upload:",IDC_STATIC,15,76,50,8
+    LTEXT           "",IDC_MONTH_UP,70,76,120,8
+
+    CONTROL         "",IDC_RECENT_LIST,"SysListView32",WS_TABSTOP | WS_BORDER | WS_VSCROLL | WS_HSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS,7,95,306,100
+    DEFPUSHBUTTON   "Close",IDOK,255,200,58,14
 END

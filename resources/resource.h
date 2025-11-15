@@ -36,6 +36,7 @@
 #define IDM_UPDATE_NORMAL               1006
 #define IDM_UPDATE_SLOW                 1007
 #define IDM_SHOW_TASKBAR_OVERLAY        1008 
+#define IDM_DASHBOARD                   1009
 
 // ============================================================================
 // DIALOG RESOURCES
@@ -43,6 +44,7 @@
 
 #define IDD_ABOUT_DIALOG                301
 #define IDD_SETTINGS_DIALOG             302
+#define IDD_DASHBOARD_DIALOG            303
 
 // ============================================================================
 // STRING RESOURCES
@@ -63,6 +65,11 @@
 #define IDC_DISPLAY_UNIT_COMBO          504
 #define IDC_AUTOSTART_CHECK             505
 #define IDC_INTERFACE_COMBO             506
+#define IDC_TODAY_DOWN                  507
+#define IDC_TODAY_UP                    508
+#define IDC_MONTH_DOWN                  509
+#define IDC_MONTH_UP                    510
+#define IDC_RECENT_LIST                 511
 
 // ============================================================================
 // STANDARD DIALOG IDS

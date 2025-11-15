@@ -14,6 +14,7 @@
 #include "../resources/resource.h"
 #include <windows.h>
 #include <windowsx.h>
+#include <commctrl.h>
 #include <vector>
 #include <limits>
 
@@ -52,6 +53,8 @@ bool ApplySettingsFromDialog(HWND hDlg);
 void PopulateInterfaceCombo(HWND hDlg);
 NetworkMonitor::NetworkStats GetSelectedNetworkStats();
 void CenterDialogOnScreen(HWND hDlg);
+void ShowDashboardDialog(HWND parent);
+INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 // ============================================================================
 // WINMAIN - APPLICATION ENTRY POINT
@@ -191,6 +194,11 @@ void CenterDialogOnScreen(HWND hDlg)
 
 bool InitializeApplication(HINSTANCE hInstance)
 {
+    INITCOMMONCONTROLSEX icc = {};
+    icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    icc.dwICC = ICC_LISTVIEW_CLASSES;
+    InitCommonControlsEx(&icc);
+
     // Register window class
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
@@ -461,6 +469,10 @@ void OnMenuCommand(UINT menuId)
             ShowSettingsDialog(g_hwnd);
             break;
 
+        case IDM_DASHBOARD:
+            ShowDashboardDialog(g_hwnd);
+            break;
+
         case IDM_ABOUT:
             ShowAboutDialog(g_hwnd);
             break;
@@ -482,6 +494,119 @@ void OnTaskbarOverlayRightClick()
     {
         g_pTrayIcon->ShowContextMenu();
     }
+}
+
+void ShowDashboardDialog(HWND parent)
+{
+    DialogBoxParamW(g_hInstance, MAKEINTRESOURCEW(IDD_DASHBOARD_DIALOG), parent, DashboardDialogProc, 0);
+}
+
+INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+
+    switch (message)
+    {
+    case WM_INITDIALOG:
+    {
+        CenterDialogOnScreen(hDlg);
+
+        unsigned long long todayDown = 0;
+        unsigned long long todayUp = 0;
+        unsigned long long monthDown = 0;
+        unsigned long long monthUp = 0;
+
+        NetworkMonitor::HistoryLogger& logger = NetworkMonitor::HistoryLogger::Instance();
+        logger.GetTotalsToday(todayDown, todayUp);
+        logger.GetTotalsThisMonth(monthDown, monthUp);
+
+        std::wstring todayDownStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(todayDown));
+        std::wstring todayUpStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(todayUp));
+        std::wstring monthDownStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(monthDown));
+        std::wstring monthUpStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(monthUp));
+
+        SetDlgItemTextW(hDlg, IDC_TODAY_DOWN, todayDownStr.c_str());
+        SetDlgItemTextW(hDlg, IDC_TODAY_UP, todayUpStr.c_str());
+        SetDlgItemTextW(hDlg, IDC_MONTH_DOWN, monthDownStr.c_str());
+        SetDlgItemTextW(hDlg, IDC_MONTH_UP, monthUpStr.c_str());
+
+        HWND hList = GetDlgItem(hDlg, IDC_RECENT_LIST);
+        if (hList)
+        {
+            ListView_SetExtendedListViewStyle(hList, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
+            LVCOLUMNW col = {};
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+
+            col.pszText = const_cast<wchar_t*>(L"Time");
+            col.cx = 130;
+            col.iSubItem = 0;
+            ListView_InsertColumn(hList, 0, &col);
+
+            col.pszText = const_cast<wchar_t*>(L"Interface");
+            col.cx = 120;
+            col.iSubItem = 1;
+            ListView_InsertColumn(hList, 1, &col);
+
+            col.pszText = const_cast<wchar_t*>(L"Down");
+            col.cx = 90;
+            col.iSubItem = 2;
+            ListView_InsertColumn(hList, 2, &col);
+
+            col.pszText = const_cast<wchar_t*>(L"Up");
+            col.cx = 90;
+            col.iSubItem = 3;
+            ListView_InsertColumn(hList, 3, &col);
+
+            std::vector<NetworkMonitor::HistorySample> samples;
+            logger.GetRecentSamples(100, samples);
+
+            int index = 0;
+            for (const auto& sample : samples)
+            {
+                wchar_t timeBuffer[64] = {};
+                std::tm localTime = {};
+                std::time_t ts = sample.timestamp;
+                if (localtime_s(&localTime, &ts) == 0)
+                {
+                    wcsftime(timeBuffer, sizeof(timeBuffer) / sizeof(wchar_t), L"%Y-%m-%d %H:%M:%S", &localTime);
+                }
+
+                LVITEMW item = {};
+                item.mask = LVIF_TEXT;
+                item.iItem = index;
+                item.iSubItem = 0;
+                item.pszText = timeBuffer;
+                int rowIndex = ListView_InsertItem(hList, &item);
+
+                std::wstring iface = sample.interfaceName.empty() ? L"All Interfaces" : sample.interfaceName;
+                ListView_SetItemText(hList, rowIndex, 1, const_cast<wchar_t*>(iface.c_str()));
+
+                std::wstring downStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(sample.bytesDown));
+                std::wstring upStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(sample.bytesUp));
+
+                ListView_SetItemText(hList, rowIndex, 2, const_cast<wchar_t*>(downStr.c_str()));
+                ListView_SetItemText(hList, rowIndex, 3, const_cast<wchar_t*>(upStr.c_str()));
+
+                ++index;
+            }
+        }
+
+        return TRUE;
+    }
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+        case IDCANCEL:
+            EndDialog(hDlg, LOWORD(wParam));
+            return TRUE;
+        }
+        break;
+    }
+
+    return FALSE;
 }
 
 void ShowSettingsDialog(HWND parent)

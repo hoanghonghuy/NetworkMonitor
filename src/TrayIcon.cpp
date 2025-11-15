@@ -296,8 +296,9 @@ HMENU TrayIcon::CreateContextMenu(const AppConfig& config, bool overlayVisible)
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
 
-    // Settings & About
+    // Settings, Dashboard & About
     AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS, L"Settings...");
+    AppendMenuW(hMenu, MF_STRING, IDM_DASHBOARD, L"Dashboard...");
     AppendMenuW(hMenu, MF_STRING, IDM_ABOUT, L"About...");
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
