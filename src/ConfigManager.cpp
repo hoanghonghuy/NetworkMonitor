@@ -34,6 +34,7 @@ bool ConfigManager::LoadConfig(AppConfig& config)
     config.displayUnit = static_cast<SpeedUnit>(ReadDWORD(hKey, L"DisplayUnit", static_cast<DWORD>(SpeedUnit::KiloBytesPerSecond)));
     config.showUploadSpeed = ReadDWORD(hKey, L"ShowUploadSpeed", 1) != 0;
     config.showDownloadSpeed = ReadDWORD(hKey, L"ShowDownloadSpeed", 1) != 0;
+    config.enableLogging = ReadDWORD(hKey, L"EnableLogging", 1) != 0;
     config.selectedInterface = ReadString(hKey, L"SelectedInterface", L"");
     config.autoStart = IsAutoStartEnabled();
 
@@ -55,6 +56,7 @@ bool ConfigManager::SaveConfig(const AppConfig& config)
     success &= WriteDWORD(hKey, L"DisplayUnit", static_cast<DWORD>(config.displayUnit));
     success &= WriteDWORD(hKey, L"ShowUploadSpeed", config.showUploadSpeed ? 1 : 0);
     success &= WriteDWORD(hKey, L"ShowDownloadSpeed", config.showDownloadSpeed ? 1 : 0);
+    success &= WriteDWORD(hKey, L"EnableLogging", config.enableLogging ? 1 : 0);
     success &= WriteString(hKey, L"SelectedInterface", config.selectedInterface);
 
     // Save auto-start setting

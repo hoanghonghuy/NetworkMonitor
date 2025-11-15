@@ -353,55 +353,51 @@ void OnTimer()
         stats = g_pNetworkMonitor->GetAggregatedStats();
     }
 
-    // ---------------------------------------------------------------------
-    // History logging: record per-interval usage into SQLite (if available)
-    // ---------------------------------------------------------------------
-    unsigned long long totalDown = static_cast<unsigned long long>(stats.bytesReceived);
-    unsigned long long totalUp   = static_cast<unsigned long long>(stats.bytesSent);
-
-    if (!g_prevTotalsValid)
+    if (g_config.enableLogging)
     {
-        g_prevTotalBytesDown = totalDown;
-        g_prevTotalBytesUp = totalUp;
-        g_prevTotalsValid = true;
-    }
-    else
-    {
-        const unsigned long long MAX_VAL = (std::numeric_limits<unsigned long long>::max)();
+        // -----------------------------------------------------------------
+        // History logging: record per-interval usage into SQLite
+        // NOTE: If counters ever go backwards (interface changed/reset),
+        // we treat that as a reset and do NOT log a huge bogus delta.
+        // -----------------------------------------------------------------
+        unsigned long long totalDown = static_cast<unsigned long long>(stats.bytesReceived);
+        unsigned long long totalUp   = static_cast<unsigned long long>(stats.bytesSent);
 
-        unsigned long long deltaDown = 0;
-        unsigned long long deltaUp = 0;
-
-        if (totalDown >= g_prevTotalBytesDown)
+        if (!g_prevTotalsValid)
         {
-            deltaDown = totalDown - g_prevTotalBytesDown;
+            g_prevTotalBytesDown = totalDown;
+            g_prevTotalBytesUp = totalUp;
+            g_prevTotalsValid = true;
         }
         else
         {
-            // Counter wrapped
-            deltaDown = (MAX_VAL - g_prevTotalBytesDown) + totalDown + 1;
-        }
+            unsigned long long deltaDown = 0;
+            unsigned long long deltaUp = 0;
 
-        if (totalUp >= g_prevTotalBytesUp)
-        {
-            deltaUp = totalUp - g_prevTotalBytesUp;
-        }
-        else
-        {
-            deltaUp = (MAX_VAL - g_prevTotalBytesUp) + totalUp + 1;
-        }
+            if (totalDown >= g_prevTotalBytesDown)
+            {
+                deltaDown = totalDown - g_prevTotalBytesDown;
+            }
+            // else: counters decreased -> treat as reset, don't accumulate
 
-        if (deltaDown > 0 || deltaUp > 0)
-        {
-            NetworkMonitor::HistoryLogger::Instance().AppendSample(
-                stats.interfaceName.empty() ? std::wstring(L"All Interfaces") : stats.interfaceName,
-                deltaDown,
-                deltaUp
-            );
-        }
+            if (totalUp >= g_prevTotalBytesUp)
+            {
+                deltaUp = totalUp - g_prevTotalBytesUp;
+            }
+            // else: counters decreased -> treat as reset
 
-        g_prevTotalBytesDown = totalDown;
-        g_prevTotalBytesUp = totalUp;
+            if (deltaDown > 0 || deltaUp > 0)
+            {
+                NetworkMonitor::HistoryLogger::Instance().AppendSample(
+                    stats.interfaceName.empty() ? std::wstring(L"All Interfaces") : stats.interfaceName,
+                    deltaDown,
+                    deltaUp
+                );
+            }
+
+            g_prevTotalBytesDown = totalDown;
+            g_prevTotalBytesUp = totalUp;
+        }
     }
 
     // Update tray icon
@@ -511,93 +507,122 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
     {
         CenterDialogOnScreen(hDlg);
 
-        unsigned long long todayDown = 0;
-        unsigned long long todayUp = 0;
-        unsigned long long monthDown = 0;
-        unsigned long long monthUp = 0;
-
-        NetworkMonitor::HistoryLogger& logger = NetworkMonitor::HistoryLogger::Instance();
-        logger.GetTotalsToday(todayDown, todayUp);
-        logger.GetTotalsThisMonth(monthDown, monthUp);
-
-        std::wstring todayDownStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(todayDown));
-        std::wstring todayUpStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(todayUp));
-        std::wstring monthDownStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(monthDown));
-        std::wstring monthUpStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(monthUp));
-
-        SetDlgItemTextW(hDlg, IDC_TODAY_DOWN, todayDownStr.c_str());
-        SetDlgItemTextW(hDlg, IDC_TODAY_UP, todayUpStr.c_str());
-        SetDlgItemTextW(hDlg, IDC_MONTH_DOWN, monthDownStr.c_str());
-        SetDlgItemTextW(hDlg, IDC_MONTH_UP, monthUpStr.c_str());
-
+        // Initialize list columns once
         HWND hList = GetDlgItem(hDlg, IDC_RECENT_LIST);
         if (hList)
         {
             ListView_SetExtendedListViewStyle(hList, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
             LVCOLUMNW col = {};
-            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM | LVCF_FMT;
 
             col.pszText = const_cast<wchar_t*>(L"Time");
-            col.cx = 130;
+            col.cx = 135;
             col.iSubItem = 0;
+            col.fmt = LVCFMT_LEFT;
             ListView_InsertColumn(hList, 0, &col);
 
             col.pszText = const_cast<wchar_t*>(L"Interface");
-            col.cx = 120;
+            col.cx = 110;
             col.iSubItem = 1;
+            col.fmt = LVCFMT_LEFT;
             ListView_InsertColumn(hList, 1, &col);
 
             col.pszText = const_cast<wchar_t*>(L"Down");
-            col.cx = 90;
+            col.cx = 85;
             col.iSubItem = 2;
+            col.fmt = LVCFMT_RIGHT;
             ListView_InsertColumn(hList, 2, &col);
 
             col.pszText = const_cast<wchar_t*>(L"Up");
-            col.cx = 90;
+            col.cx = 85;
             col.iSubItem = 3;
+            col.fmt = LVCFMT_RIGHT;
             ListView_InsertColumn(hList, 3, &col);
-
-            std::vector<NetworkMonitor::HistorySample> samples;
-            logger.GetRecentSamples(100, samples);
-
-            int index = 0;
-            for (const auto& sample : samples)
-            {
-                wchar_t timeBuffer[64] = {};
-                std::tm localTime = {};
-                std::time_t ts = sample.timestamp;
-                if (localtime_s(&localTime, &ts) == 0)
-                {
-                    wcsftime(timeBuffer, sizeof(timeBuffer) / sizeof(wchar_t), L"%Y-%m-%d %H:%M:%S", &localTime);
-                }
-
-                LVITEMW item = {};
-                item.mask = LVIF_TEXT;
-                item.iItem = index;
-                item.iSubItem = 0;
-                item.pszText = timeBuffer;
-                int rowIndex = ListView_InsertItem(hList, &item);
-
-                std::wstring iface = sample.interfaceName.empty() ? L"All Interfaces" : sample.interfaceName;
-                ListView_SetItemText(hList, rowIndex, 1, const_cast<wchar_t*>(iface.c_str()));
-
-                std::wstring downStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(sample.bytesDown));
-                std::wstring upStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(sample.bytesUp));
-
-                ListView_SetItemText(hList, rowIndex, 2, const_cast<wchar_t*>(downStr.c_str()));
-                ListView_SetItemText(hList, rowIndex, 3, const_cast<wchar_t*>(upStr.c_str()));
-
-                ++index;
-            }
         }
 
+        // Fill data
+        PostMessage(hDlg, WM_COMMAND, MAKEWPARAM(IDC_DASHBOARD_REFRESH, 0), 0);
         return TRUE;
     }
 
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
+        case IDC_DASHBOARD_REFRESH:
+        {
+            unsigned long long todayDown = 0;
+            unsigned long long todayUp = 0;
+            unsigned long long monthDown = 0;
+            unsigned long long monthUp = 0;
+
+            NetworkMonitor::HistoryLogger& logger = NetworkMonitor::HistoryLogger::Instance();
+            const std::wstring* ifaceFilter = nullptr;
+            if (!g_config.selectedInterface.empty())
+            {
+                ifaceFilter = &g_config.selectedInterface;
+            }
+
+            logger.GetTotalsToday(todayDown, todayUp, ifaceFilter);
+            logger.GetTotalsThisMonth(monthDown, monthUp, ifaceFilter);
+
+            std::wstring todayDownStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(todayDown));
+            std::wstring todayUpStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(todayUp));
+            std::wstring monthDownStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(monthDown));
+            std::wstring monthUpStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(monthUp));
+
+            SetDlgItemTextW(hDlg, IDC_TODAY_DOWN, todayDownStr.c_str());
+            SetDlgItemTextW(hDlg, IDC_TODAY_UP, todayUpStr.c_str());
+            SetDlgItemTextW(hDlg, IDC_MONTH_DOWN, monthDownStr.c_str());
+            SetDlgItemTextW(hDlg, IDC_MONTH_UP, monthUpStr.c_str());
+
+            HWND hList = GetDlgItem(hDlg, IDC_RECENT_LIST);
+            if (hList)
+            {
+                ListView_DeleteAllItems(hList);
+
+                std::vector<NetworkMonitor::HistorySample> samples;
+                logger.GetRecentSamples(100, samples, ifaceFilter, true /*onlyToday*/);
+
+                int index = 0;
+                for (const auto& sample : samples)
+                {
+                    wchar_t timeBuffer[64] = {};
+                    std::tm localTime = {};
+                    std::time_t ts = sample.timestamp;
+                    if (localtime_s(&localTime, &ts) == 0)
+                    {
+                        wcsftime(timeBuffer, sizeof(timeBuffer) / sizeof(wchar_t), L"%Y-%m-%d %H:%M:%S", &localTime);
+                    }
+
+                    LVITEMW item = {};
+                    item.mask = LVIF_TEXT;
+                    item.iItem = index;
+                    item.iSubItem = 0;
+                    item.pszText = timeBuffer;
+                    int rowIndex = ListView_InsertItem(hList, &item);
+
+                    std::wstring iface = sample.interfaceName.empty() ? L"All Interfaces" : sample.interfaceName;
+                    ListView_SetItemText(hList, rowIndex, 1, const_cast<wchar_t*>(iface.c_str()));
+
+                    std::wstring downStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(sample.bytesDown));
+                    std::wstring upStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(sample.bytesUp));
+
+                    ListView_SetItemText(hList, rowIndex, 2, const_cast<wchar_t*>(downStr.c_str()));
+                    ListView_SetItemText(hList, rowIndex, 3, const_cast<wchar_t*>(upStr.c_str()));
+
+                    ++index;
+                }
+
+                // Auto-size columns to contents
+                ListView_SetColumnWidth(hList, 0, LVSCW_AUTOSIZE_USEHEADER);
+                ListView_SetColumnWidth(hList, 1, LVSCW_AUTOSIZE_USEHEADER);
+                ListView_SetColumnWidth(hList, 2, LVSCW_AUTOSIZE_USEHEADER);
+                ListView_SetColumnWidth(hList, 3, LVSCW_AUTOSIZE_USEHEADER);
+            }
+            return TRUE;
+        }
+
         case IDOK:
         case IDCANCEL:
             EndDialog(hDlg, LOWORD(wParam));
@@ -692,6 +717,7 @@ void PopulateSettingsDialog(HWND hDlg)
     PopulateInterfaceCombo(hDlg);
 
     CheckDlgButton(hDlg, IDC_AUTOSTART_CHECK, g_config.autoStart ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_ENABLE_LOGGING_CHECK, g_config.enableLogging ? BST_CHECKED : BST_UNCHECKED);
 }
 
 bool ApplySettingsFromDialog(HWND hDlg)
@@ -717,6 +743,7 @@ bool ApplySettingsFromDialog(HWND hDlg)
     }
 
     newAutoStart = (IsDlgButtonChecked(hDlg, IDC_AUTOSTART_CHECK) == BST_CHECKED);
+    bool newEnableLogging = (IsDlgButtonChecked(hDlg, IDC_ENABLE_LOGGING_CHECK) == BST_CHECKED);
 
     HWND hInterface = GetDlgItem(hDlg, IDC_INTERFACE_COMBO);
     sel = static_cast<int>(SendMessageW(hInterface, CB_GETCURSEL, 0, 0));
@@ -739,6 +766,7 @@ bool ApplySettingsFromDialog(HWND hDlg)
     g_config.updateInterval = newInterval;
     g_config.displayUnit = newUnit;
     g_config.autoStart = newAutoStart;
+    g_config.enableLogging = newEnableLogging;
     g_config.selectedInterface = newInterface;
 
     g_pConfigManager->SaveConfig(g_config);

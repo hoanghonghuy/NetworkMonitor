@@ -70,6 +70,8 @@
 #define IDC_MONTH_DOWN                  509
 #define IDC_MONTH_UP                    510
 #define IDC_RECENT_LIST                 511
+#define IDC_ENABLE_LOGGING_CHECK        512
+#define IDC_DASHBOARD_REFRESH           513
 
 // ============================================================================
 // STANDARD DIALOG IDS

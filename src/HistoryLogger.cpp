@@ -8,6 +8,7 @@
 
 #include <cwchar>   // wcsrchr
 #include <ctime>
+#include <string>
 #include "sqlite3.h"
 
 namespace NetworkMonitor
@@ -145,7 +146,8 @@ bool HistoryLogger::InsertSampleSQLite(std::time_t ts,
     return (rc == SQLITE_DONE || rc == SQLITE_OK);
 }
 
-bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long long& totalUp)
+bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long long& totalUp,
+                                   const std::wstring* interfaceFilter)
 {
     totalDown = 0;
     totalUp = 0;
@@ -177,7 +179,15 @@ bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long 
 
     const char* sql =
         "SELECT COALESCE(SUM(bytes_down), 0), COALESCE(SUM(bytes_up), 0) "
-        "FROM usage WHERE timestamp >= ? AND timestamp < ?;";
+        "FROM usage WHERE timestamp >= ? AND timestamp < ?";
+
+    bool useFilter = (interfaceFilter != nullptr && !interfaceFilter->empty());
+    if (useFilter)
+    {
+        sql =
+            "SELECT COALESCE(SUM(bytes_down), 0), COALESCE(SUM(bytes_up), 0) "
+            "FROM usage WHERE timestamp >= ? AND timestamp < ? AND interface = ?";
+    }
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
@@ -188,6 +198,11 @@ bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long 
 
     sqlite3_bind_int64(stmt, 1, static_cast<sqlite3_int64>(start));
     sqlite3_bind_int64(stmt, 2, static_cast<sqlite3_int64>(end));
+
+    if (useFilter)
+    {
+        sqlite3_bind_text16(stmt, 3, interfaceFilter->c_str(), -1, nullptr);
+    }
 
     rc = sqlite3_step(stmt);
     if (rc == SQLITE_ROW)
@@ -201,7 +216,8 @@ bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long 
     return (rc == SQLITE_ROW || rc == SQLITE_DONE);
 }
 
-bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned long long& totalUp)
+bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned long long& totalUp,
+                                       const std::wstring* interfaceFilter)
 {
     totalDown = 0;
     totalUp = 0;
@@ -246,7 +262,15 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
 
     const char* sql =
         "SELECT COALESCE(SUM(bytes_down), 0), COALESCE(SUM(bytes_up), 0) "
-        "FROM usage WHERE timestamp >= ? AND timestamp < ?;";
+        "FROM usage WHERE timestamp >= ? AND timestamp < ?";
+
+    bool useFilter = (interfaceFilter != nullptr && !interfaceFilter->empty());
+    if (useFilter)
+    {
+        sql =
+            "SELECT COALESCE(SUM(bytes_down), 0), COALESCE(SUM(bytes_up), 0) "
+            "FROM usage WHERE timestamp >= ? AND timestamp < ? AND interface = ?";
+    }
 
     sqlite3_stmt* stmt = nullptr;
     int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
@@ -257,6 +281,11 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
 
     sqlite3_bind_int64(stmt, 1, static_cast<sqlite3_int64>(start));
     sqlite3_bind_int64(stmt, 2, static_cast<sqlite3_int64>(end));
+
+    if (useFilter)
+    {
+        sqlite3_bind_text16(stmt, 3, interfaceFilter->c_str(), -1, nullptr);
+    }
 
     rc = sqlite3_step(stmt);
     if (rc == SQLITE_ROW)
@@ -270,7 +299,9 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
     return (rc == SQLITE_ROW || rc == SQLITE_DONE);
 }
 
-bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outSamples)
+bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outSamples,
+                                     const std::wstring* interfaceFilter,
+                                     bool onlyToday)
 {
     outSamples.clear();
 
@@ -285,20 +316,68 @@ bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outS
         return false;
     }
 
-    const char* sql =
-        "SELECT timestamp, interface, bytes_down, bytes_up "
-        "FROM usage "
-        "ORDER BY timestamp DESC "
-        "LIMIT ?;";
+    // Build dynamic query based on filters
+    std::string sql =
+        "SELECT timestamp, interface, bytes_down, bytes_up FROM usage";
+
+    std::time_t startToday = 0;
+    bool restrictToday = onlyToday;
+    if (restrictToday)
+    {
+        std::time_t now = std::time(nullptr);
+        std::tm localTime = {};
+        if (localtime_s(&localTime, &now) != 0)
+        {
+            restrictToday = false;
+        }
+        else
+        {
+            localTime.tm_hour = 0;
+            localTime.tm_min = 0;
+            localTime.tm_sec = 0;
+            startToday = std::mktime(&localTime);
+            if (startToday == static_cast<std::time_t>(-1))
+            {
+                restrictToday = false;
+            }
+        }
+    }
+
+    bool useFilter = (interfaceFilter != nullptr && !interfaceFilter->empty());
+
+    bool hasWhere = false;
+    if (restrictToday)
+    {
+        sql += " WHERE timestamp >= ?";
+        hasWhere = true;
+    }
+
+    if (useFilter)
+    {
+        sql += hasWhere ? " AND interface = ?" : " WHERE interface = ?";
+        hasWhere = true;
+    }
+
+    sql += " ORDER BY timestamp DESC LIMIT ?";
 
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(m_db, sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK || !stmt)
     {
         return false;
     }
 
-    sqlite3_bind_int(stmt, 1, limit);
+    int bindIndex = 1;
+    if (restrictToday)
+    {
+        sqlite3_bind_int64(stmt, bindIndex++, static_cast<sqlite3_int64>(startToday));
+    }
+    if (useFilter)
+    {
+        sqlite3_bind_text16(stmt, bindIndex++, interfaceFilter->c_str(), -1, nullptr);
+    }
+
+    sqlite3_bind_int(stmt, bindIndex, limit);
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
     {

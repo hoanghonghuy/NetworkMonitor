@@ -135,6 +135,7 @@ struct AppConfig
     bool autoStart;                  // Auto-start with Windows
     bool showUploadSpeed;            // Show upload speed
     bool showDownloadSpeed;          // Show download speed
+    bool enableLogging;              // Enable history logging
     std::wstring selectedInterface;  // Selected interface name (empty = all)
 
     AppConfig()
@@ -143,6 +144,7 @@ struct AppConfig
         , autoStart(false)
         , showUploadSpeed(true)
         , showDownloadSpeed(true)
+        , enableLogging(true)
         , selectedInterface(L"")
     {
     }

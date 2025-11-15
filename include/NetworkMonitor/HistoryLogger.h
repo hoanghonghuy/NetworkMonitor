@@ -38,10 +38,18 @@ public:
                       unsigned long long bytesDown,
                       unsigned long long bytesUp);
 
-    // These will be implemented later for the dashboard
-    bool GetTotalsToday(unsigned long long& totalDown, unsigned long long& totalUp);
-    bool GetTotalsThisMonth(unsigned long long& totalDown, unsigned long long& totalUp);
-    bool GetRecentSamples(int limit, std::vector<HistorySample>& outSamples);
+    // Dashboard queries
+    // If interfaceFilter is non-null and non-empty, filter by that interface name.
+    bool GetTotalsToday(unsigned long long& totalDown, unsigned long long& totalUp,
+                        const std::wstring* interfaceFilter = nullptr);
+
+    bool GetTotalsThisMonth(unsigned long long& totalDown, unsigned long long& totalUp,
+                            const std::wstring* interfaceFilter = nullptr);
+
+    // If onlyToday == true, restrict samples to from start-of-today (local time).
+    bool GetRecentSamples(int limit, std::vector<HistorySample>& outSamples,
+                          const std::wstring* interfaceFilter = nullptr,
+                          bool onlyToday = false);
 
 private:
     HistoryLogger();
