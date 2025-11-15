@@ -32,12 +32,8 @@ std::wstring FormatSpeed(double bytesPerSecond, SpeedUnit unit);
  */
 std::wstring FormatBytes(ULONG64 bytes);
 
-/**
- * Convert SpeedUnit enum to string
- * @param unit Speed unit enum value
- * @return Unit string (e.g., "KB/s")
- */
 std::wstring SpeedUnitToString(SpeedUnit unit);
+std::wstring LoadStringResource(UINT resourceId);
 
 // ============================================================================
 // CONVERSION UTILITIES

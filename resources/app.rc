@@ -59,9 +59,50 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_APP_TITLE           "NetworkMonitor"
-    IDS_ERROR_INIT          "Failed to initialize NetworkMonitor"
-    IDS_ERROR_NETWORK       "Failed to access network interfaces"
+    IDS_APP_TITLE                    "NetworkMonitor"
+    IDS_ERROR_INIT                   "Failed to initialize NetworkMonitor"
+    IDS_ERROR_NETWORK                "Failed to access network interfaces"
+    IDS_ERROR_ALREADY_RUNNING        "NetworkMonitor is already running!"
+    IDS_ERR_REGISTER_WINDOW_CLASS    "Failed to register window class"
+    IDS_ERR_CREATE_WINDOW            "Failed to create window"
+    IDS_ERR_INIT_TRAY_ICON           "Failed to initialize tray icon"
+    IDS_ERR_INIT_TASKBAR_OVERLAY     "Failed to initialize taskbar overlay"
+    IDS_ERR_START_NETWORK_MONITOR    "Failed to start network monitoring"
+    IDS_ERR_LOAD_APP_ICON            "Failed to load application icon"
+    IDS_ERR_CREATE_TRAY_ICON         "Failed to create tray icon"
+    IDS_MENU_UPDATE_INTERVAL         "Update Interval"
+    IDS_MENU_UPDATE_FAST             "Fast (1s)"
+    IDS_MENU_UPDATE_NORMAL           "Normal (2s)"
+    IDS_MENU_UPDATE_SLOW             "Slow (5s)"
+    IDS_MENU_AUTOSTART               "Start with Windows"
+    IDS_MENU_TASKBAR_OVERLAY         "Taskbar Overlay"
+    IDS_MENU_SETTINGS                "Settings..."
+    IDS_MENU_DASHBOARD               "Dashboard..."
+    IDS_MENU_ABOUT                   "About..."
+    IDS_MENU_EXIT                    "Exit"
+    IDS_DASHBOARD_COL_TIME           "Time"
+    IDS_DASHBOARD_COL_INTERFACE      "Interface"
+    IDS_DASHBOARD_COL_DOWN           "Down"
+    IDS_DASHBOARD_COL_UP             "Up"
+    IDS_INTERVAL_FAST                "Fast (1s)"
+    IDS_INTERVAL_NORMAL              "Normal (2s)"
+    IDS_INTERVAL_SLOW                "Slow (5s)"
+    IDS_UNIT_BYTES_PER_SECOND        "Bytes per second"
+    IDS_UNIT_KILOBYTES_PER_SECOND    "Kilobytes per second"
+    IDS_UNIT_MEGABYTES_PER_SECOND    "Megabytes per second"
+    IDS_UNIT_MEGABITS_PER_SECOND     "Megabits per second"
+    IDS_ALL_INTERFACES               "All Interfaces"
+    IDS_AGGREGATED_STATS             "Aggregated Statistics"
+    IDS_OVERLAY_DOWN_PREFIX          "Down: "
+    IDS_OVERLAY_UP_PREFIX            "Up: "
+    IDS_ABOUT_TITLE                  "About NetworkMonitor"
+    IDS_ABOUT_VERSION_LABEL          "Version: "
+    IDS_ABOUT_BODY                   "A lightweight network traffic monitor for Windows.\nDisplays real-time download/upload speeds in the system tray and taskbar."
+    IDS_HISTORY_MANAGE_TITLE         "Manage History"
+    IDS_HISTORY_CONFIRM_DELETE_ALL   "This will delete all logged history. Are you sure?"
+    IDS_HISTORY_CONFIRM_TRIM_30      "Delete all records older than 30 days?"
+    IDS_HISTORY_CONFIRM_TRIM_90      "Delete all records older than 90 days?"
+    IDS_HISTORY_ERROR_OPERATION      "Failed to modify history database."
 END
 
 // ============================================================================
@@ -168,6 +209,19 @@ BEGIN
     LTEXT           "",IDC_MONTH_UP,70,76,120,8
 
     CONTROL         "",IDC_RECENT_LIST,"SysListView32",WS_TABSTOP | WS_BORDER | WS_VSCROLL | WS_HSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS,7,95,306,100
-    PUSHBUTTON      "Refresh",IDC_DASHBOARD_REFRESH,190,200,58,14
+    PUSHBUTTON      "Manage history...",IDC_HISTORY_MANAGE,110,200,76,14
+    PUSHBUTTON      "Refresh",IDC_DASHBOARD_REFRESH,195,200,58,14
     DEFPUSHBUTTON   "Close",IDOK,255,200,58,14
+END
+
+IDD_HISTORY_MANAGE_DIALOG DIALOGEX 0, 0, 240, 110
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Manage History"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "History operations:",IDC_STATIC,7,7,200,8
+    PUSHBUTTON      "Delete all history",IDC_HISTORY_DELETE_ALL,7,24,90,14
+    PUSHBUTTON      "Keep last 30 days",IDC_HISTORY_KEEP_30,7,42,90,14
+    PUSHBUTTON      "Keep last 90 days",IDC_HISTORY_KEEP_90,7,60,90,14
+    DEFPUSHBUTTON   "Close",IDCANCEL,170,86,60,14
 END

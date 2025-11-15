@@ -6,6 +6,7 @@
 
 #include "NetworkMonitor/NetworkCalculator.h"
 #include "NetworkMonitor/Utils.h"
+#include "../resources/resource.h"
 #include <algorithm>
 
 namespace NetworkMonitor
@@ -101,8 +102,17 @@ bool NetworkCalculator::UpdateStats(NetworkStats& stats, ULONG64 currentBytesIn,
 NetworkStats NetworkCalculator::CalculateAggregate(const std::vector<NetworkStats>& statsList)
 {
     NetworkStats aggregate;
-    aggregate.interfaceName = L"All Interfaces";
-    aggregate.interfaceDesc = L"Aggregated Statistics";
+    aggregate.interfaceName = LoadStringResource(IDS_ALL_INTERFACES);
+    if (aggregate.interfaceName.empty())
+    {
+        aggregate.interfaceName = L"All Interfaces";
+    }
+
+    aggregate.interfaceDesc = LoadStringResource(IDS_AGGREGATED_STATS);
+    if (aggregate.interfaceDesc.empty())
+    {
+        aggregate.interfaceDesc = L"Aggregated Statistics";
+    }
 
     if (statsList.empty())
     {

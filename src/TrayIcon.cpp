@@ -6,6 +6,7 @@
 
 #include "NetworkMonitor/TrayIcon.h"
 #include "NetworkMonitor/Utils.h"
+#include "../resources/resource.h"
 
 namespace NetworkMonitor
 {
@@ -43,7 +44,7 @@ bool TrayIcon::Initialize(HWND hwnd)
 
     if (m_iconIdle == nullptr)
     {
-        ShowErrorMessage(L"Failed to load application icon");
+        ShowErrorMessage(LoadStringResource(IDS_ERR_LOAD_APP_ICON));
         return false;
     }
 
@@ -59,7 +60,7 @@ bool TrayIcon::Initialize(HWND hwnd)
     // Add tray icon
     if (!Shell_NotifyIconW(NIM_ADD, &m_notifyIconData))
     {
-        ShowErrorMessage(L"Failed to create tray icon");
+        ShowErrorMessage(LoadStringResource(IDS_ERR_CREATE_TRAY_ICON));
         return false;
     }
 
@@ -277,34 +278,34 @@ HMENU TrayIcon::CreateContextMenu(const AppConfig& config, bool overlayVisible)
     // Update Speed submenu
     HMENU hUpdateMenu = CreatePopupMenu();
     AppendMenuW(hUpdateMenu, MF_STRING | (config.updateInterval == UPDATE_INTERVAL_FAST ? MF_CHECKED : 0),
-                IDM_UPDATE_FAST, L"Fast (1s)");
+                IDM_UPDATE_FAST, LoadStringResource(IDS_MENU_UPDATE_FAST).c_str());
     AppendMenuW(hUpdateMenu, MF_STRING | (config.updateInterval == UPDATE_INTERVAL_NORMAL ? MF_CHECKED : 0),
-                IDM_UPDATE_NORMAL, L"Normal (2s)");
+                IDM_UPDATE_NORMAL, LoadStringResource(IDS_MENU_UPDATE_NORMAL).c_str());
     AppendMenuW(hUpdateMenu, MF_STRING | (config.updateInterval == UPDATE_INTERVAL_SLOW ? MF_CHECKED : 0),
-                IDM_UPDATE_SLOW, L"Slow (5s)");
+                IDM_UPDATE_SLOW, LoadStringResource(IDS_MENU_UPDATE_SLOW).c_str());
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, L"Update Interval");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hUpdateMenu, LoadStringResource(IDS_MENU_UPDATE_INTERVAL).c_str());
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
 
     // Auto Start
     AppendMenuW(hMenu, MF_STRING | (config.autoStart ? MF_CHECKED : 0),
-                IDM_AUTOSTART, L"Start with Windows");
+                IDM_AUTOSTART, LoadStringResource(IDS_MENU_AUTOSTART).c_str());
 
     // Taskbar overlay toggle
     AppendMenuW(hMenu, MF_STRING | (overlayVisible ? MF_CHECKED : 0),
-                IDM_SHOW_TASKBAR_OVERLAY, L"Taskbar Overlay");
+                IDM_SHOW_TASKBAR_OVERLAY, LoadStringResource(IDS_MENU_TASKBAR_OVERLAY).c_str());
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
 
     // Settings, Dashboard & About
-    AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS, L"Settings...");
-    AppendMenuW(hMenu, MF_STRING, IDM_DASHBOARD, L"Dashboard...");
-    AppendMenuW(hMenu, MF_STRING, IDM_ABOUT, L"About...");
+    AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS, LoadStringResource(IDS_MENU_SETTINGS).c_str());
+    AppendMenuW(hMenu, MF_STRING, IDM_DASHBOARD, LoadStringResource(IDS_MENU_DASHBOARD).c_str());
+    AppendMenuW(hMenu, MF_STRING, IDM_ABOUT, LoadStringResource(IDS_MENU_ABOUT).c_str());
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
 
     // Exit
-    AppendMenuW(hMenu, MF_STRING, IDM_EXIT, L"Exit");
+    AppendMenuW(hMenu, MF_STRING, IDM_EXIT, LoadStringResource(IDS_MENU_EXIT).c_str());
 
     return hMenu;
 }

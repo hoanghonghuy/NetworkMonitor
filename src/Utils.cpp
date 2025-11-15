@@ -140,6 +140,25 @@ std::wstring SpeedUnitToString(SpeedUnit unit)
     }
 }
 
+std::wstring LoadStringResource(UINT resourceId)
+{
+    wchar_t buffer[256] = {};
+
+    HINSTANCE hInstance = GetModuleHandleW(nullptr);
+    int length = 0;
+    if (hInstance)
+    {
+        length = LoadStringW(hInstance, resourceId, buffer, static_cast<int>(sizeof(buffer) / sizeof(wchar_t)));
+    }
+
+    if (length <= 0)
+    {
+        return std::wstring();
+    }
+
+    return std::wstring(buffer, length);
+}
+
 // ============================================================================
 // CONVERSION UTILITIES IMPLEMENTATION
 // ============================================================================

@@ -55,6 +55,8 @@ NetworkMonitor::NetworkStats GetSelectedNetworkStats();
 void CenterDialogOnScreen(HWND hDlg);
 void ShowDashboardDialog(HWND parent);
 INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+void ShowHistoryManageDialog(HWND parent);
+INT_PTR CALLBACK HistoryManageDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 // ============================================================================
 // WINMAIN - APPLICATION ENTRY POINT
@@ -76,7 +78,17 @@ int WINAPI WinMain(
     HANDLE hMutex = CreateMutexW(nullptr, TRUE, L"NetworkMonitor_SingleInstance");
     if (GetLastError() == ERROR_ALREADY_EXISTS)
     {
-        MessageBoxW(nullptr, L"NetworkMonitor is already running!", APP_NAME, MB_OK | MB_ICONINFORMATION);
+        std::wstring msg = NetworkMonitor::LoadStringResource(IDS_ERROR_ALREADY_RUNNING);
+        std::wstring title = NetworkMonitor::LoadStringResource(IDS_APP_TITLE);
+        if (title.empty())
+        {
+            title = APP_NAME;
+        }
+        if (msg.empty())
+        {
+            msg = L"NetworkMonitor is already running!";
+        }
+        MessageBoxW(nullptr, msg.c_str(), title.c_str(), MB_OK | MB_ICONINFORMATION);
         return 0;
     }
 
@@ -210,7 +222,7 @@ bool InitializeApplication(HINSTANCE hInstance)
 
     if (!RegisterClassExW(&wc))
     {
-        NetworkMonitor::ShowErrorMessage(L"Failed to register window class");
+        NetworkMonitor::ShowErrorMessage(NetworkMonitor::LoadStringResource(IDS_ERR_REGISTER_WINDOW_CLASS));
         return false;
     }
 
@@ -230,7 +242,7 @@ bool InitializeApplication(HINSTANCE hInstance)
 
     if (!g_hwnd)
     {
-        NetworkMonitor::ShowErrorMessage(L"Failed to create window");
+        NetworkMonitor::ShowErrorMessage(NetworkMonitor::LoadStringResource(IDS_ERR_CREATE_WINDOW));
         return false;
     }
 
@@ -249,7 +261,7 @@ bool InitializeApplication(HINSTANCE hInstance)
     g_pTrayIcon = new NetworkMonitor::TrayIcon();
     if (!g_pTrayIcon->Initialize(g_hwnd))
     {
-        NetworkMonitor::ShowErrorMessage(L"Failed to initialize tray icon");
+        NetworkMonitor::ShowErrorMessage(NetworkMonitor::LoadStringResource(IDS_ERR_INIT_TRAY_ICON));
         return false;
     }
 
@@ -261,7 +273,7 @@ bool InitializeApplication(HINSTANCE hInstance)
     g_pTaskbarOverlay = new NetworkMonitor::TaskbarOverlay();
     if (!g_pTaskbarOverlay->Initialize(hInstance))
     {
-        NetworkMonitor::ShowErrorMessage(L"Failed to initialize taskbar overlay");
+        NetworkMonitor::ShowErrorMessage(NetworkMonitor::LoadStringResource(IDS_ERR_INIT_TASKBAR_OVERLAY));
         // Don't fail completely, just log warning
         SAFE_DELETE(g_pTaskbarOverlay);
     }
@@ -282,7 +294,7 @@ bool InitializeApplication(HINSTANCE hInstance)
     g_pNetworkMonitor = new NetworkMonitor::NetworkMonitorClass();
     if (!g_pNetworkMonitor->Start())
     {
-        NetworkMonitor::ShowErrorMessage(L"Failed to start network monitoring");
+        NetworkMonitor::ShowErrorMessage(NetworkMonitor::LoadStringResource(IDS_ERR_START_NETWORK_MONITOR));
         return false;
     }
 
@@ -388,8 +400,18 @@ void OnTimer()
 
             if (deltaDown > 0 || deltaUp > 0)
             {
+                std::wstring ifaceName = stats.interfaceName;
+                if (ifaceName.empty())
+                {
+                    ifaceName = NetworkMonitor::LoadStringResource(IDS_ALL_INTERFACES);
+                    if (ifaceName.empty())
+                    {
+                        ifaceName = L"All Interfaces";
+                    }
+                }
+
                 NetworkMonitor::HistoryLogger::Instance().AppendSample(
-                    stats.interfaceName.empty() ? std::wstring(L"All Interfaces") : stats.interfaceName,
+                    ifaceName,
                     deltaDown,
                     deltaUp
                 );
@@ -497,6 +519,11 @@ void ShowDashboardDialog(HWND parent)
     DialogBoxParamW(g_hInstance, MAKEINTRESOURCEW(IDD_DASHBOARD_DIALOG), parent, DashboardDialogProc, 0);
 }
 
+void ShowHistoryManageDialog(HWND parent)
+{
+    DialogBoxParamW(g_hInstance, MAKEINTRESOURCEW(IDD_HISTORY_MANAGE_DIALOG), parent, HistoryManageDialogProc, 0);
+}
+
 INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -516,25 +543,45 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
             LVCOLUMNW col = {};
             col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM | LVCF_FMT;
 
-            col.pszText = const_cast<wchar_t*>(L"Time");
+            std::wstring timeHeader = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_COL_TIME);
+            if (timeHeader.empty())
+            {
+                timeHeader = L"Time";
+            }
+            col.pszText = const_cast<wchar_t*>(timeHeader.c_str());
             col.cx = 135;
             col.iSubItem = 0;
             col.fmt = LVCFMT_LEFT;
             ListView_InsertColumn(hList, 0, &col);
 
-            col.pszText = const_cast<wchar_t*>(L"Interface");
+            std::wstring ifaceHeader = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_COL_INTERFACE);
+            if (ifaceHeader.empty())
+            {
+                ifaceHeader = L"Interface";
+            }
+            col.pszText = const_cast<wchar_t*>(ifaceHeader.c_str());
             col.cx = 110;
             col.iSubItem = 1;
             col.fmt = LVCFMT_LEFT;
             ListView_InsertColumn(hList, 1, &col);
 
-            col.pszText = const_cast<wchar_t*>(L"Down");
+            std::wstring downHeader = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_COL_DOWN);
+            if (downHeader.empty())
+            {
+                downHeader = L"Down";
+            }
+            col.pszText = const_cast<wchar_t*>(downHeader.c_str());
             col.cx = 85;
             col.iSubItem = 2;
             col.fmt = LVCFMT_RIGHT;
             ListView_InsertColumn(hList, 2, &col);
 
-            col.pszText = const_cast<wchar_t*>(L"Up");
+            std::wstring upHeader = NetworkMonitor::LoadStringResource(IDS_DASHBOARD_COL_UP);
+            if (upHeader.empty())
+            {
+                upHeader = L"Up";
+            }
+            col.pszText = const_cast<wchar_t*>(upHeader.c_str());
             col.cx = 85;
             col.iSubItem = 3;
             col.fmt = LVCFMT_RIGHT;
@@ -602,7 +649,15 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
                     item.pszText = timeBuffer;
                     int rowIndex = ListView_InsertItem(hList, &item);
 
-                    std::wstring iface = sample.interfaceName.empty() ? L"All Interfaces" : sample.interfaceName;
+                    std::wstring iface = sample.interfaceName;
+                    if (iface.empty())
+                    {
+                        iface = NetworkMonitor::LoadStringResource(IDS_ALL_INTERFACES);
+                        if (iface.empty())
+                        {
+                            iface = L"All Interfaces";
+                        }
+                    }
                     ListView_SetItemText(hList, rowIndex, 1, const_cast<wchar_t*>(iface.c_str()));
 
                     std::wstring downStr = NetworkMonitor::FormatBytes(static_cast<ULONG64>(sample.bytesDown));
@@ -620,6 +675,14 @@ INT_PTR CALLBACK DashboardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPA
                 ListView_SetColumnWidth(hList, 2, LVSCW_AUTOSIZE_USEHEADER);
                 ListView_SetColumnWidth(hList, 3, LVSCW_AUTOSIZE_USEHEADER);
             }
+            return TRUE;
+        }
+
+        case IDC_HISTORY_MANAGE:
+        {
+            ShowHistoryManageDialog(hDlg);
+            // After user modifies history, refresh dashboard view
+            PostMessage(hDlg, WM_COMMAND, MAKEWPARAM(IDC_DASHBOARD_REFRESH, 0), 0);
             return TRUE;
         }
 
@@ -675,19 +738,39 @@ void PopulateSettingsDialog(HWND hDlg)
     HWND hInterval = GetDlgItem(hDlg, IDC_UPDATE_INTERVAL_COMBO);
     struct IntervalOption
     {
-        const wchar_t* label;
+        UINT resourceId;
         UINT interval;
     };
 
     const IntervalOption intervals[] = {
-        {L"Fast (1s)", UPDATE_INTERVAL_FAST},
-        {L"Normal (2s)", UPDATE_INTERVAL_NORMAL},
-        {L"Slow (5s)", UPDATE_INTERVAL_SLOW},
+        {IDS_INTERVAL_FAST, UPDATE_INTERVAL_FAST},
+        {IDS_INTERVAL_NORMAL, UPDATE_INTERVAL_NORMAL},
+        {IDS_INTERVAL_SLOW, UPDATE_INTERVAL_SLOW},
     };
 
     for (const auto& option : intervals)
     {
-        int index = static_cast<int>(SendMessageW(hInterval, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(option.label)));
+        std::wstring label = NetworkMonitor::LoadStringResource(option.resourceId);
+        if (label.empty())
+        {
+            switch (option.interval)
+            {
+            case UPDATE_INTERVAL_FAST:
+                label = L"Fast (1s)";
+                break;
+            case UPDATE_INTERVAL_NORMAL:
+                label = L"Normal (2s)";
+                break;
+            case UPDATE_INTERVAL_SLOW:
+                label = L"Slow (5s)";
+                break;
+            default:
+                label = L"Unknown";
+                break;
+            }
+        }
+
+        int index = static_cast<int>(SendMessageW(hInterval, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str())));
         SendMessageW(hInterval, CB_SETITEMDATA, index, option.interval);
         if (g_config.updateInterval == option.interval)
         {
@@ -696,17 +779,40 @@ void PopulateSettingsDialog(HWND hDlg)
     }
 
     HWND hUnit = GetDlgItem(hDlg, IDC_DISPLAY_UNIT_COMBO);
-    struct UnitOption { const wchar_t* label; NetworkMonitor::SpeedUnit unit; };
+    struct UnitOption { UINT resourceId; NetworkMonitor::SpeedUnit unit; };
     const UnitOption units[] = {
-        {L"Bytes per second", NetworkMonitor::SpeedUnit::BytesPerSecond},
-        {L"Kilobytes per second", NetworkMonitor::SpeedUnit::KiloBytesPerSecond},
-        {L"Megabytes per second", NetworkMonitor::SpeedUnit::MegaBytesPerSecond},
-        {L"Megabits per second", NetworkMonitor::SpeedUnit::MegaBitsPerSecond},
+        {IDS_UNIT_BYTES_PER_SECOND, NetworkMonitor::SpeedUnit::BytesPerSecond},
+        {IDS_UNIT_KILOBYTES_PER_SECOND, NetworkMonitor::SpeedUnit::KiloBytesPerSecond},
+        {IDS_UNIT_MEGABYTES_PER_SECOND, NetworkMonitor::SpeedUnit::MegaBytesPerSecond},
+        {IDS_UNIT_MEGABITS_PER_SECOND, NetworkMonitor::SpeedUnit::MegaBitsPerSecond},
     };
 
     for (const auto& option : units)
     {
-        int index = static_cast<int>(SendMessageW(hUnit, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(option.label)));
+        std::wstring label = NetworkMonitor::LoadStringResource(option.resourceId);
+        if (label.empty())
+        {
+            switch (option.unit)
+            {
+            case NetworkMonitor::SpeedUnit::BytesPerSecond:
+                label = L"Bytes per second";
+                break;
+            case NetworkMonitor::SpeedUnit::KiloBytesPerSecond:
+                label = L"Kilobytes per second";
+                break;
+            case NetworkMonitor::SpeedUnit::MegaBytesPerSecond:
+                label = L"Megabytes per second";
+                break;
+            case NetworkMonitor::SpeedUnit::MegaBitsPerSecond:
+                label = L"Megabits per second";
+                break;
+            default:
+                label = L"Unknown";
+                break;
+            }
+        }
+
+        int index = static_cast<int>(SendMessageW(hUnit, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str())));
         SendMessageW(hUnit, CB_SETITEMDATA, index, static_cast<WPARAM>(option.unit));
         if (g_config.displayUnit == option.unit)
         {
@@ -788,7 +894,13 @@ void PopulateInterfaceCombo(HWND hDlg)
     HWND hInterface = GetDlgItem(hDlg, IDC_INTERFACE_COMBO);
     SendMessageW(hInterface, CB_RESETCONTENT, 0, 0);
 
-    int index = static_cast<int>(SendMessageW(hInterface, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"All Interfaces")));
+    std::wstring allLabel = NetworkMonitor::LoadStringResource(IDS_ALL_INTERFACES);
+    if (allLabel.empty())
+    {
+        allLabel = L"All Interfaces";
+    }
+
+    int index = static_cast<int>(SendMessageW(hInterface, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(allLabel.c_str())));
     if (g_config.selectedInterface.empty())
     {
         SendMessageW(hInterface, CB_SETCURSEL, index, 0);
@@ -814,13 +926,145 @@ void PopulateInterfaceCombo(HWND hDlg)
 
 void ShowAboutDialog(HWND hwnd)
 {
+    std::wstring title = NetworkMonitor::LoadStringResource(IDS_ABOUT_TITLE);
+    if (title.empty())
+    {
+        title = L"About NetworkMonitor";
+    }
+
+    std::wstring versionLabel = NetworkMonitor::LoadStringResource(IDS_ABOUT_VERSION_LABEL);
+    if (versionLabel.empty())
+    {
+        versionLabel = L"Version: ";
+    }
+
+    std::wstring body = NetworkMonitor::LoadStringResource(IDS_ABOUT_BODY);
+    if (body.empty())
+    {
+        body = L"A lightweight network traffic monitor for Windows.\nDisplays real-time download/upload speeds in the system tray and taskbar.";
+    }
+
     std::wstring message = APP_NAME;
     message += L"\n";
-    message += L"Version: ";
+    message += versionLabel;
     message += APP_VERSION;
     message += L"\n\n";
-    message += L"A lightweight network traffic monitor for Windows.\n";
-    message += L"Displays real-time download/upload speeds in the system tray and taskbar.";
+    message += body;
 
-    MessageBoxW(hwnd, message.c_str(), L"About NetworkMonitor", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(hwnd, message.c_str(), title.c_str(), MB_OK | MB_ICONINFORMATION);
+}
+
+// ============================================================================
+// HISTORY MANAGEMENT DIALOG
+// ============================================================================
+
+INT_PTR CALLBACK HistoryManageDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+
+    switch (message)
+    {
+    case WM_INITDIALOG:
+    {
+        CenterDialogOnScreen(hDlg);
+
+        std::wstring title = NetworkMonitor::LoadStringResource(IDS_HISTORY_MANAGE_TITLE);
+        if (!title.empty())
+        {
+            SetWindowTextW(hDlg, title.c_str());
+        }
+
+        return TRUE;
+    }
+
+    case WM_COMMAND:
+    {
+        switch (LOWORD(wParam))
+        {
+        case IDC_HISTORY_DELETE_ALL:
+        case IDC_HISTORY_KEEP_30:
+        case IDC_HISTORY_KEEP_90:
+        {
+            int days = 0;
+            UINT confirmId = 0;
+
+            if (LOWORD(wParam) == IDC_HISTORY_DELETE_ALL)
+            {
+                days = 0;
+                confirmId = IDS_HISTORY_CONFIRM_DELETE_ALL;
+            }
+            else if (LOWORD(wParam) == IDC_HISTORY_KEEP_30)
+            {
+                days = 30;
+                confirmId = IDS_HISTORY_CONFIRM_TRIM_30;
+            }
+            else if (LOWORD(wParam) == IDC_HISTORY_KEEP_90)
+            {
+                days = 90;
+                confirmId = IDS_HISTORY_CONFIRM_TRIM_90;
+            }
+
+            std::wstring confirmText = NetworkMonitor::LoadStringResource(confirmId);
+            if (confirmText.empty())
+            {
+                switch (LOWORD(wParam))
+                {
+                case IDC_HISTORY_DELETE_ALL:
+                    confirmText = L"This will delete all logged history. Are you sure?";
+                    break;
+                case IDC_HISTORY_KEEP_30:
+                    confirmText = L"Delete all records older than 30 days?";
+                    break;
+                case IDC_HISTORY_KEEP_90:
+                    confirmText = L"Delete all records older than 90 days?";
+                    break;
+                }
+            }
+
+            std::wstring title = NetworkMonitor::LoadStringResource(IDS_HISTORY_MANAGE_TITLE);
+            if (title.empty())
+            {
+                title = L"Manage History";
+            }
+
+            int res = MessageBoxW(hDlg, confirmText.c_str(), title.c_str(), MB_YESNO | MB_ICONQUESTION);
+            if (res != IDYES)
+            {
+                return TRUE;
+            }
+
+            bool ok = false;
+            auto& logger = NetworkMonitor::HistoryLogger::Instance();
+            if (days <= 0)
+            {
+                ok = logger.DeleteAll();
+            }
+            else
+            {
+                ok = logger.TrimToRecentDays(days);
+            }
+
+            if (!ok)
+            {
+                std::wstring err = NetworkMonitor::LoadStringResource(IDS_HISTORY_ERROR_OPERATION);
+                if (err.empty())
+                {
+                    err = L"Failed to modify history database.";
+                }
+                MessageBoxW(hDlg, err.c_str(), title.c_str(), MB_OK | MB_ICONERROR);
+            }
+
+            return TRUE;
+        }
+
+        case IDCANCEL:
+        case IDOK:
+            EndDialog(hDlg, LOWORD(wParam));
+            return TRUE;
+        }
+        break;
+    }
+    }
+
+    return FALSE;
 }

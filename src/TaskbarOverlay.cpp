@@ -6,6 +6,7 @@
 
 #include "NetworkMonitor/TaskbarOverlay.h"
 #include "NetworkMonitor/Utils.h"
+#include "../resources/resource.h"
 #include <dwmapi.h>
 
 #pragma comment(lib, "Dwmapi.lib")
@@ -462,10 +463,22 @@ void TaskbarOverlay::OnPaint()
     // Format speeds
     std::wstring downStr = FormatSpeed(m_downloadSpeed, m_displayUnit);
     std::wstring upStr = FormatSpeed(m_uploadSpeed, m_displayUnit);
-    
-    // Create 2 lines with "Down:" and "Up:"
-    std::wstring line1 = L"Down: " + downStr;
-    std::wstring line2 = L"Up: " + upStr;
+
+    // Create 2 lines with localized prefixes
+    std::wstring downPrefix = LoadStringResource(IDS_OVERLAY_DOWN_PREFIX);
+    if (downPrefix.empty())
+    {
+        downPrefix = L"Down: ";
+    }
+
+    std::wstring upPrefix = LoadStringResource(IDS_OVERLAY_UP_PREFIX);
+    if (upPrefix.empty())
+    {
+        upPrefix = L"Up: ";
+    }
+
+    std::wstring line1 = downPrefix + downStr;
+    std::wstring line2 = upPrefix + upStr;
 
     // Calculate line positions
     int lineHeight = 16;

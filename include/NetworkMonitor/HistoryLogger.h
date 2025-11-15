@@ -51,6 +51,9 @@ public:
                           const std::wstring* interfaceFilter = nullptr,
                           bool onlyToday = false);
 
+    bool DeleteAll();
+    bool TrimToRecentDays(int days);
+
 private:
     HistoryLogger();
     ~HistoryLogger();

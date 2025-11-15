@@ -405,4 +405,50 @@ bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outS
     return (rc == SQLITE_DONE);
 }
 
+bool HistoryLogger::DeleteAll()
+{
+    EnsureInitialized();
+    if (!m_sqliteAvailable || !m_db)
+    {
+        return false;
+    }
+
+    const char* sql = "DELETE FROM usage;";
+    int rc = sqlite3_exec(m_db, sql, nullptr, nullptr, nullptr);
+    return (rc == SQLITE_OK || rc == SQLITE_DONE);
+}
+
+bool HistoryLogger::TrimToRecentDays(int days)
+{
+    if (days <= 0)
+    {
+        return DeleteAll();
+    }
+
+    EnsureInitialized();
+    if (!m_sqliteAvailable || !m_db)
+    {
+        return false;
+    }
+
+    std::time_t now = std::time(nullptr);
+    std::time_t cutoff = now - static_cast<std::time_t>(static_cast<long long>(days) * 24 * 60 * 60);
+
+    const char* sql = "DELETE FROM usage WHERE timestamp < ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK || !stmt)
+    {
+        return false;
+    }
+
+    sqlite3_bind_int64(stmt, 1, static_cast<sqlite3_int64>(cutoff));
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return (rc == SQLITE_DONE || rc == SQLITE_OK);
+}
+
 } // namespace NetworkMonitor

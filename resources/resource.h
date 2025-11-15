@@ -45,6 +45,7 @@
 #define IDD_ABOUT_DIALOG                301
 #define IDD_SETTINGS_DIALOG             302
 #define IDD_DASHBOARD_DIALOG            303
+#define IDD_HISTORY_MANAGE_DIALOG       304
 
 // ============================================================================
 // STRING RESOURCES
@@ -53,6 +54,47 @@
 #define IDS_APP_TITLE                   401
 #define IDS_ERROR_INIT                  402
 #define IDS_ERROR_NETWORK               403
+#define IDS_ERROR_ALREADY_RUNNING       404
+#define IDS_ERR_REGISTER_WINDOW_CLASS   405
+#define IDS_ERR_CREATE_WINDOW           406
+#define IDS_ERR_INIT_TRAY_ICON          407
+#define IDS_ERR_INIT_TASKBAR_OVERLAY    408
+#define IDS_ERR_START_NETWORK_MONITOR   409
+#define IDS_ERR_LOAD_APP_ICON           410
+#define IDS_ERR_CREATE_TRAY_ICON        411
+#define IDS_MENU_UPDATE_INTERVAL        412
+#define IDS_MENU_UPDATE_FAST            413
+#define IDS_MENU_UPDATE_NORMAL          414
+#define IDS_MENU_UPDATE_SLOW            415
+#define IDS_MENU_AUTOSTART              416
+#define IDS_MENU_TASKBAR_OVERLAY        417
+#define IDS_MENU_SETTINGS               418
+#define IDS_MENU_DASHBOARD              419
+#define IDS_MENU_ABOUT                  420
+#define IDS_MENU_EXIT                   421
+#define IDS_DASHBOARD_COL_TIME          422
+#define IDS_DASHBOARD_COL_INTERFACE     423
+#define IDS_DASHBOARD_COL_DOWN          424
+#define IDS_DASHBOARD_COL_UP            425
+#define IDS_INTERVAL_FAST               426
+#define IDS_INTERVAL_NORMAL             427
+#define IDS_INTERVAL_SLOW               428
+#define IDS_UNIT_BYTES_PER_SECOND       429
+#define IDS_UNIT_KILOBYTES_PER_SECOND   430
+#define IDS_UNIT_MEGABYTES_PER_SECOND   431
+#define IDS_UNIT_MEGABITS_PER_SECOND    432
+#define IDS_ALL_INTERFACES              433
+#define IDS_AGGREGATED_STATS            434
+#define IDS_OVERLAY_DOWN_PREFIX         435
+#define IDS_OVERLAY_UP_PREFIX           436
+#define IDS_ABOUT_TITLE                 437
+#define IDS_ABOUT_VERSION_LABEL         438
+#define IDS_ABOUT_BODY                  439
+#define IDS_HISTORY_MANAGE_TITLE        440
+#define IDS_HISTORY_CONFIRM_DELETE_ALL  441
+#define IDS_HISTORY_CONFIRM_TRIM_30     442
+#define IDS_HISTORY_CONFIRM_TRIM_90     443
+#define IDS_HISTORY_ERROR_OPERATION     444
 
 // ============================================================================
 // CONTROL IDS (for dialogs)
@@ -72,6 +114,10 @@
 #define IDC_RECENT_LIST                 511
 #define IDC_ENABLE_LOGGING_CHECK        512
 #define IDC_DASHBOARD_REFRESH           513
+#define IDC_HISTORY_DELETE_ALL          514
+#define IDC_HISTORY_KEEP_30             515
+#define IDC_HISTORY_KEEP_90             516
+#define IDC_HISTORY_MANAGE              517
 
 // ============================================================================
 // STANDARD DIALOG IDS
