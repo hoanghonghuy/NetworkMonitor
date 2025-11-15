@@ -17,8 +17,72 @@ namespace NetworkMonitor
 
 std::wstring FormatSpeed(double bytesPerSecond, SpeedUnit unit)
 {
-    double convertedValue = ConvertSpeed(bytesPerSecond, unit);
-    std::wstring unitStr = SpeedUnitToString(unit);
+    constexpr double KB = 1024.0;
+    constexpr double MB = KB * 1024.0;
+    constexpr double GB = MB * 1024.0;
+
+    double convertedValue = 0.0;
+    std::wstring unitStr;
+
+    switch (unit)
+    {
+    case SpeedUnit::BytesPerSecond:
+    {
+        convertedValue = bytesPerSecond;
+        unitStr = L"B/s";
+        if (convertedValue >= KB)
+        {
+            convertedValue /= KB;
+            unitStr = L"KB/s";
+        }
+        if (convertedValue >= KB)
+        {
+            convertedValue /= KB;
+            unitStr = L"MB/s";
+        }
+        if (convertedValue >= KB)
+        {
+            convertedValue /= KB;
+            unitStr = L"GB/s";
+        }
+        break;
+    }
+
+    case SpeedUnit::KiloBytesPerSecond:
+    {
+        convertedValue = bytesPerSecond / KB;
+        unitStr = L"KB/s";
+        if (convertedValue >= KB)
+        {
+            convertedValue /= KB;
+            unitStr = L"MB/s";
+        }
+        if (convertedValue >= KB)
+        {
+            convertedValue /= KB;
+            unitStr = L"GB/s";
+        }
+        break;
+    }
+
+    case SpeedUnit::MegaBytesPerSecond:
+    {
+        convertedValue = bytesPerSecond / MB;
+        unitStr = L"MB/s";
+        if (convertedValue >= KB)
+        {
+            convertedValue /= KB;
+            unitStr = L"GB/s";
+        }
+        break;
+    }
+
+    case SpeedUnit::MegaBitsPerSecond:
+    default:
+        convertedValue = (bytesPerSecond * 8.0) / 1000000.0; // decimal Mbps
+        unitStr = L"Mbps";
+        break;
+    }
 
     std::wostringstream oss;
     oss << std::fixed << std::setprecision(2) << convertedValue << L" " << unitStr;

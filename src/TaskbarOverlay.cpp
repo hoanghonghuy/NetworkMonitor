@@ -23,6 +23,12 @@ TaskbarOverlay::TaskbarOverlay()
     , m_downloadSpeed(0.0)
     , m_uploadSpeed(0.0)
     , m_displayUnit(SpeedUnit::KiloBytesPerSecond)
+    , m_memDC(nullptr)
+    , m_memBitmap(nullptr)
+    , m_oldBitmap(nullptr)
+    , m_font(nullptr)
+    , m_bitmapWidth(0)
+    , m_bitmapHeight(0)
 {
 }
 
@@ -63,6 +69,8 @@ bool TaskbarOverlay::Initialize(HINSTANCE hInstance)
 
 void TaskbarOverlay::Cleanup()
 {
+    ReleaseGraphicsResources();
+
     if (m_hwnd && m_timerId)
     {
         KillTimer(m_hwnd, TIMER_CHECK_VISIBILITY);
@@ -426,11 +434,16 @@ void TaskbarOverlay::OnPaint()
 
     RECT rect;
     GetClientRect(m_hwnd, &rect);
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
 
-    // Create memory DC for double buffering
-    HDC hdcMem = CreateCompatibleDC(hdc);
-    HBITMAP hbmMem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
-    HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
+    if (!EnsureGraphicsResources(hdc, width, height))
+    {
+        EndPaint(m_hwnd, &ps);
+        return;
+    }
+
+    HDC hdcMem = m_memDC;
 
     // Fill with RGB(1,1,1) - this will be transparent
     HBRUSH hBrush = CreateSolidBrush(RGB(1, 1, 1));
@@ -440,25 +453,11 @@ void TaskbarOverlay::OnPaint()
     // Set transparent text background
     SetBkMode(hdcMem, TRANSPARENT);
 
-    // Create font
-    HFONT hFont = CreateFontW(
-        13,                          // Height
-        0,                           // Width
-        0,                           // Escapement
-        0,                           // Orientation
-        FW_NORMAL,                   // Weight
-        FALSE,                       // Italic
-        FALSE,                       // Underline
-        FALSE,                       // StrikeOut
-        DEFAULT_CHARSET,             // CharSet
-        OUT_DEFAULT_PRECIS,          // OutPrecision
-        CLIP_DEFAULT_PRECIS,         // ClipPrecision
-        CLEARTYPE_QUALITY,           // Quality
-        DEFAULT_PITCH | FF_DONTCARE, // PitchAndFamily
-        L"Segoe UI"                  // FaceName
-    );
-
-    HFONT hOldFont = (HFONT)SelectObject(hdcMem, hFont);
+    HFONT hOldFont = nullptr;
+    if (m_font)
+    {
+        hOldFont = (HFONT)SelectObject(hdcMem, m_font);
+    }
 
     // Format speeds
     std::wstring downStr = FormatSpeed(m_downloadSpeed, m_displayUnit);
@@ -489,13 +488,102 @@ void TaskbarOverlay::OnPaint()
     BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
 
     // Cleanup
-    SelectObject(hdcMem, hOldFont);
-    SelectObject(hdcMem, hbmOld);
-    DeleteObject(hFont);
-    DeleteObject(hbmMem);
-    DeleteDC(hdcMem);
+    if (hOldFont)
+    {
+        SelectObject(hdcMem, hOldFont);
+    }
 
     EndPaint(m_hwnd, &ps);
+}
+
+bool TaskbarOverlay::EnsureGraphicsResources(HDC referenceDC, int width, int height)
+{
+    if (!referenceDC || width <= 0 || height <= 0)
+    {
+        return false;
+    }
+
+    if (!m_memDC)
+    {
+        m_memDC = CreateCompatibleDC(referenceDC);
+        if (!m_memDC)
+        {
+            return false;
+        }
+    }
+
+    if (!m_memBitmap || width != m_bitmapWidth || height != m_bitmapHeight)
+    {
+        HBITMAP newBitmap = CreateCompatibleBitmap(referenceDC, width, height);
+        if (!newBitmap)
+        {
+            return false;
+        }
+
+        if (m_memBitmap)
+        {
+            SelectObject(m_memDC, m_oldBitmap);
+            DeleteObject(m_memBitmap);
+        }
+
+        m_memBitmap = newBitmap;
+        m_oldBitmap = (HBITMAP)SelectObject(m_memDC, m_memBitmap);
+        m_bitmapWidth = width;
+        m_bitmapHeight = height;
+    }
+
+    if (!m_font)
+    {
+        m_font = CreateFontW(
+            13,                          // Height
+            0,                           // Width
+            0,                           // Escapement
+            0,                           // Orientation
+            FW_NORMAL,                   // Weight
+            FALSE,                       // Italic
+            FALSE,                       // Underline
+            FALSE,                       // StrikeOut
+            DEFAULT_CHARSET,             // CharSet
+            OUT_DEFAULT_PRECIS,          // OutPrecision
+            CLIP_DEFAULT_PRECIS,         // ClipPrecision
+            CLEARTYPE_QUALITY,           // Quality
+            DEFAULT_PITCH | FF_DONTCARE, // PitchAndFamily
+            L"Segoe UI"                  // FaceName
+        );
+
+        if (!m_font)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void TaskbarOverlay::ReleaseGraphicsResources()
+{
+    if (m_memDC)
+    {
+        if (m_memBitmap)
+        {
+            SelectObject(m_memDC, m_oldBitmap);
+            DeleteObject(m_memBitmap);
+            m_memBitmap = nullptr;
+        }
+
+        DeleteDC(m_memDC);
+        m_memDC = nullptr;
+    }
+
+    if (m_font)
+    {
+        DeleteObject(m_font);
+        m_font = nullptr;
+    }
+
+    m_oldBitmap = nullptr;
+    m_bitmapWidth = 0;
+    m_bitmapHeight = 0;
 }
 
 void TaskbarOverlay::OnRightButtonUp()

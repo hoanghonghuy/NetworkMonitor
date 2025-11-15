@@ -136,6 +136,17 @@ private:
 
     // Callback
     std::function<void()> m_rightClickCallback; // Right-click callback
+
+    // Cached graphics resources (created once, reused every paint)
+    HDC m_memDC;
+    HBITMAP m_memBitmap;
+    HBITMAP m_oldBitmap;
+    HFONT m_font;
+    int m_bitmapWidth;
+    int m_bitmapHeight;
+
+    bool EnsureGraphicsResources(HDC referenceDC, int width, int height);
+    void ReleaseGraphicsResources();
 };
 
 } // namespace NetworkMonitor

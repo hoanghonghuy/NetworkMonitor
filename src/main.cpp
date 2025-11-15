@@ -207,6 +207,7 @@ bool InitializeApplication(HINSTANCE hInstance)
 
     // Set menu callback
     g_pTrayIcon->SetMenuCallback(OnMenuCommand);
+    g_pTrayIcon->SetConfigSource(&g_config);
 
     // THÊM MỚI: Create taskbar overlay
     g_pTaskbarOverlay = new NetworkMonitor::TaskbarOverlay();
@@ -224,6 +225,10 @@ bool InitializeApplication(HINSTANCE hInstance)
         // Show overlay by default
         g_pTaskbarOverlay->Show(true);
     }
+
+    g_pTrayIcon->SetOverlayVisibilityProvider([]() -> bool {
+        return g_pTaskbarOverlay != nullptr && g_pTaskbarOverlay->IsVisible();
+    });
 
     // Create network monitor
     g_pNetworkMonitor = new NetworkMonitor::NetworkMonitorClass();
@@ -368,7 +373,7 @@ void OnTaskbarOverlayRightClick()
     // When user right-clicks on taskbar overlay, show tray icon menu
     if (g_pTrayIcon)
     {
-        g_pTrayIcon->ShowContextMenu(g_config);
+        g_pTrayIcon->ShowContextMenu();
     }
 }
 

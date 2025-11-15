@@ -16,6 +16,8 @@ TrayIcon::TrayIcon()
     , m_iconIdle(nullptr)
     , m_iconActive(nullptr)
     , m_iconHigh(nullptr)
+    , m_configRef(nullptr)
+    , m_overlayVisibleProvider(nullptr)
 {
     ZeroMemory(&m_notifyIconData, sizeof(NOTIFYICONDATAW));
 }
@@ -175,8 +177,7 @@ bool TrayIcon::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam)
             // Note: Only handle WM_RBUTTONUP to avoid showing menu twice
             if (LOWORD(lParam) == WM_RBUTTONUP)
             {
-                AppConfig config; // Use default config for now
-                ShowContextMenu(config);
+                ShowContextMenu();
             }
             return true;
         }
@@ -192,11 +193,24 @@ bool TrayIcon::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam)
     return false;
 }
 
-void TrayIcon::ShowContextMenu(const AppConfig& config)
+void TrayIcon::ShowContextMenu()
 {
     if (!m_initialized)
     {
         return;
+    }
+
+    const AppConfig* configPtr = m_configRef;
+    AppConfig tempConfig;
+    if (!configPtr)
+    {
+        configPtr = &tempConfig;
+    }
+
+    bool overlayVisible = false;
+    if (m_overlayVisibleProvider)
+    {
+        overlayVisible = m_overlayVisibleProvider();
     }
 
     // Get cursor position
@@ -204,7 +218,7 @@ void TrayIcon::ShowContextMenu(const AppConfig& config)
     GetCursorPos(&cursorPos);
 
     // Create context menu
-    HMENU hMenu = CreateContextMenu(config);
+    HMENU hMenu = CreateContextMenu(*configPtr, overlayVisible);
     if (hMenu == nullptr)
     {
         return;
@@ -241,7 +255,17 @@ void TrayIcon::SetMenuCallback(std::function<void(UINT)> callback)
     m_menuCallback = callback;
 }
 
-HMENU TrayIcon::CreateContextMenu(const AppConfig& config)
+void TrayIcon::SetConfigSource(const AppConfig* config)
+{
+    m_configRef = config;
+}
+
+void TrayIcon::SetOverlayVisibilityProvider(std::function<bool()> provider)
+{
+    m_overlayVisibleProvider = std::move(provider);
+}
+
+HMENU TrayIcon::CreateContextMenu(const AppConfig& config, bool overlayVisible)
 {
     HMENU hMenu = CreatePopupMenu();
     if (hMenu == nullptr)
@@ -265,6 +289,10 @@ HMENU TrayIcon::CreateContextMenu(const AppConfig& config)
     // Auto Start
     AppendMenuW(hMenu, MF_STRING | (config.autoStart ? MF_CHECKED : 0),
                 IDM_AUTOSTART, L"Start with Windows");
+
+    // Taskbar overlay toggle
+    AppendMenuW(hMenu, MF_STRING | (overlayVisible ? MF_CHECKED : 0),
+                IDM_SHOW_TASKBAR_OVERLAY, L"Taskbar Overlay");
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
 

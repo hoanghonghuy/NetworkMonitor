@@ -60,9 +60,8 @@ public:
 
     /**
      * Show context menu at cursor position
-     * @param config Current application configuration
      */
-    void ShowContextMenu(const AppConfig& config);
+    void ShowContextMenu();
 
     /**
      * Set callback for menu item selection
@@ -70,13 +69,23 @@ public:
      */
     void SetMenuCallback(std::function<void(UINT)> callback);
 
+    /**
+     * Provide pointer to current configuration (for reflecting menu state)
+     */
+    void SetConfigSource(const AppConfig* config);
+
+    /**
+     * Provide callback to query taskbar overlay visibility state
+     */
+    void SetOverlayVisibilityProvider(std::function<bool()> provider);
+
 private:
     /**
      * Create context menu
      * @param config Current application configuration
      * @return Menu handle
      */
-    HMENU CreateContextMenu(const AppConfig& config);
+    HMENU CreateContextMenu(const AppConfig& config, bool overlayVisible);
 
     /**
      * Load application icon
@@ -92,6 +101,8 @@ private:
     HICON m_iconActive;                             // Icon when active
     HICON m_iconHigh;                               // Icon when high traffic
     std::function<void(UINT)> m_menuCallback;       // Menu selection callback
+    const AppConfig* m_configRef;                   // Current config reference
+    std::function<bool()> m_overlayVisibleProvider; // Overlay visibility provider
 };
 
 } // namespace NetworkMonitor
