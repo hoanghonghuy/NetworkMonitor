@@ -65,18 +65,26 @@ set(HEADER_FILES
     include/NetworkMonitor/TrayIcon.h
     include/NetworkMonitor/TaskbarOverlay.h
     include/NetworkMonitor/HistoryLogger.h
+    include/NetworkMonitor/Application.h
+    include/NetworkMonitor/SettingsDialog.h
+    include/NetworkMonitor/DashboardDialog.h
+    include/NetworkMonitor/HistoryDialog.h
 )
 
 # Source files
 set(SOURCE_FILES
-    src/main.cpp
-    src/Utils.cpp
-    src/NetworkCalculator.cpp
-    src/NetworkMonitor.cpp
-    src/ConfigManager.cpp
-    src/TrayIcon.cpp
-    src/TaskbarOverlay.cpp
-    src/HistoryLogger.cpp
+    src/entry/main.cpp
+    src/core/Application.cpp
+    src/ui/dialogs/SettingsDialog.cpp
+    src/ui/dialogs/DashboardDialog.cpp
+    src/ui/dialogs/HistoryDialog.cpp
+    src/core/Utils.cpp
+    src/core/NetworkCalculator.cpp
+    src/core/NetworkMonitor.cpp
+    src/core/ConfigManager.cpp
+    src/ui/TrayIcon.cpp
+    src/ui/TaskbarOverlay.cpp
+    src/core/HistoryLogger.cpp
     third_party/sqlite/sqlite3.c
 )
 

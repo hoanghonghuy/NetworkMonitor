@@ -197,20 +197,28 @@
   <!-- SOURCE FILES -->
   <!-- ====================================================================== -->
   <ItemGroup>
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Utils.cpp" />
-    <ClCompile Include="src\NetworkCalculator.cpp" />
-    <ClCompile Include="src\NetworkMonitor.cpp" />
-    <ClCompile Include="src\ConfigManager.cpp" />
-    <ClCompile Include="src\TrayIcon.cpp" />
-    <ClCompile Include="src\TaskbarOverlay.cpp" />
-    <ClCompile Include="src\HistoryLogger.cpp" />
+    <ClCompile Include="src\core\Application.cpp" />
+    <ClCompile Include="src\ui\dialogs\SettingsDialog.cpp" />
+    <ClCompile Include="src\ui\dialogs\DashboardDialog.cpp" />
+    <ClCompile Include="src\ui\dialogs\HistoryDialog.cpp" />
+    <ClCompile Include="src\entry\main.cpp" />
+    <ClCompile Include="src\core\Utils.cpp" />
+    <ClCompile Include="src\core\NetworkCalculator.cpp" />
+    <ClCompile Include="src\core\NetworkMonitor.cpp" />
+    <ClCompile Include="src\core\ConfigManager.cpp" />
+    <ClCompile Include="src\ui\TrayIcon.cpp" />
+    <ClCompile Include="src\ui\TaskbarOverlay.cpp" />
+    <ClCompile Include="src\core\HistoryLogger.cpp" />
     <ClCompile Include="third_party\sqlite\sqlite3.c" />
   </ItemGroup>
   <!-- ====================================================================== -->
   <!-- HEADER FILES -->
   <!-- ====================================================================== -->
   <ItemGroup>
+    <ClInclude Include="include\NetworkMonitor\Application.h" />
+    <ClInclude Include="include\NetworkMonitor\SettingsDialog.h" />
+    <ClInclude Include="include\NetworkMonitor\DashboardDialog.h" />
+    <ClInclude Include="include\NetworkMonitor\HistoryDialog.h" />
     <ClInclude Include="include\NetworkMonitor\Common.h" />
     <ClInclude Include="include\NetworkMonitor\Utils.h" />
     <ClInclude Include="include\NetworkMonitor\NetworkCalculator.h" />

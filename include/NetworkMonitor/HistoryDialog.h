@@ -1,0 +1,39 @@
+// ============================================================================
+// File: HistoryDialog.h
+// Description: History management dialog for NetworkMonitor
+// Author: NetworkMonitor Project
+// ============================================================================
+
+#ifndef NETWORK_MONITOR_HISTORY_DIALOG_H
+#define NETWORK_MONITOR_HISTORY_DIALOG_H
+
+#include "NetworkMonitor/Common.h"
+
+namespace NetworkMonitor
+{
+
+class HistoryDialog
+{
+public:
+    HistoryDialog();
+    ~HistoryDialog();
+
+    // Show the history management dialog modally
+    bool Show(HWND parentWindow);
+
+private:
+    // Dialog procedure
+    static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+    INT_PTR CALLBACK InstanceDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+
+    // Dialog helper methods
+    void UpdateHistoryInfo(HWND hDlg);
+    void CenterDialogOnScreen(HWND hDlg);
+
+    // Member variables
+    HWND m_hDialog;
+};
+
+} // namespace NetworkMonitor
+
+#endif // NETWORK_MONITOR_HISTORY_DIALOG_H

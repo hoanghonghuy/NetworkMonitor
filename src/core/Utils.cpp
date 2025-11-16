@@ -19,7 +19,6 @@ std::wstring FormatSpeed(double bytesPerSecond, SpeedUnit unit)
 {
     constexpr double KB = 1024.0;
     constexpr double MB = KB * 1024.0;
-    constexpr double GB = MB * 1024.0;
 
     double convertedValue = 0.0;
     std::wstring unitStr;

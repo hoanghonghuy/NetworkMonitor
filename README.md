@@ -103,6 +103,41 @@ cmake --build . --config Release
 
 - Changing the Language will apply to the texts retrieved from the resource (menu, dialog, message).
 
+## Architecture overview
+
+The codebase is organized into clear layers:
+
+- **src/entry**
+  - `main.cpp`: Win32 `WinMain` entry. Creates a single-instance mutex and runs `NetworkMonitor::Application`.
+
+- **src/core**
+  - `Application`: main controller that owns the hidden message window, timer, `ConfigManager`, `NetworkMonitorClass`, `TrayIcon`, `TaskbarOverlay` and drives the app lifecycle (`Initialize`, `Run`, `Cleanup`).
+  - `NetworkMonitorClass`: collects per-interface traffic statistics using Win32/IP Helper APIs.
+  - `ConfigManager`: loads/saves settings (registry) into `AppConfig`.
+  - `HistoryLogger`: singleton that logs samples to SQLite and exposes queries used by the dashboard.
+  - `NetworkCalculator`, `Utils`, `HistoryLogger` helpers.
+
+- **src/ui**
+  - `TrayIcon`: creates the system tray icon, context menu and routes menu commands back to `Application::OnMenuCommand`.
+  - `TaskbarOverlay`: draws the 2-line speed overlay window near the taskbar and forwards right-clicks to the tray menu.
+
+- **src/ui/dialogs**
+  - `SettingsDialog`: modal settings dialog; edits `AppConfig` through `ConfigManager`.
+  - `DashboardDialog`: shows Today/This month totals, chart and recent samples, backed by `HistoryLogger`.
+  - `HistoryDialog`: simple dialog that calls `HistoryLogger::DeleteAll` / `TrimToRecentDays`.
+
+- **resources**
+  - `app.rc`, `resource.h`, icons, manifest and all STRINGTABLEs (EN/VI) for menus and dialogs.
+
+High-level data flow:
+
+1. `WinMain` → `Application::Initialize()` sets up window class, hidden window, timer and components.
+2. Timer (`WM_TIMER`) → `Application::OnTimer()` updates `NetworkMonitorClass`, logs samples via `HistoryLogger` and refreshes tray icon & overlay.
+3. Tray menu commands → `Application::OnMenuCommand()` (update interval, settings, dashboard, history, about, exit).
+4. Dialogs are created by `Application` as needed and operate purely on `AppConfig`/`HistoryLogger`, keeping UI logic separate from core.
+
+Legacy global functions and dialog procedures from the old `main.cpp` are kept only as commented-out reference and no longer participate in the build.
+
 ## Configuration & Data
 
 - **Registry**: save configuration under key

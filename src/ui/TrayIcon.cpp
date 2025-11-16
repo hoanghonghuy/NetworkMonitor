@@ -6,7 +6,7 @@
 
 #include "NetworkMonitor/TrayIcon.h"
 #include "NetworkMonitor/Utils.h"
-#include "../resources/resource.h"
+#include "../../resources/resource.h"
 
 namespace NetworkMonitor
 {

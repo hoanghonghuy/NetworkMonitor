@@ -6,7 +6,7 @@
 
 #include "NetworkMonitor/TaskbarOverlay.h"
 #include "NetworkMonitor/Utils.h"
-#include "../resources/resource.h"
+#include "../../resources/resource.h"
 #include <dwmapi.h>
 
 #pragma comment(lib, "Dwmapi.lib")
