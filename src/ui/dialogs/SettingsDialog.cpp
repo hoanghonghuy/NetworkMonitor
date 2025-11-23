@@ -8,7 +8,6 @@
 #include "NetworkMonitor/ConfigManager.h"
 #include "NetworkMonitor/NetworkMonitor.h"
 #include "NetworkMonitor/Utils.h"
-#include "NetworkMonitor/HistoryLogger.h"
 #include "../../../resources/resource.h"
 #include <windowsx.h>
 #include <commctrl.h>
@@ -168,6 +167,12 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 SetDlgItemTextW(hDlg, IDC_SETTINGS_LABEL_AUTOTRIM, trimLabelText.c_str());
             }
 
+            std::wstring openLogText = LoadStringResource(IDS_SETTINGS_BUTTON_OPEN_LOG);
+            if (!openLogText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_SETTINGS_BUTTON_OPEN_LOG, openLogText.c_str());
+            }
+
             // Populate dialog controls
             PopulateDialog(hDlg);
             CenterDialogOnScreen(hDlg);
@@ -178,6 +183,12 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
         {
             switch (LOWORD(wParam))
             {
+                case IDC_SETTINGS_BUTTON_OPEN_LOG:
+                {
+                    OpenLogFileInExplorer();
+                    return TRUE;
+                }
+
                 case IDOK:
                 {
                     if (ApplySettingsFromDialog(hDlg))

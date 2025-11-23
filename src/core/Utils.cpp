@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
+#include <shellapi.h>
 
 namespace NetworkMonitor
 {
@@ -324,6 +325,29 @@ void LogError(const std::wstring& message)
 void SetDebugLoggingEnabled(bool enabled)
 {
     g_debugLoggingEnabled = enabled;
+}
+
+void OpenLogFileInExplorer()
+{
+    std::wstring logPath = GetLogFilePath();
+
+    if (logPath.empty())
+    {
+        return;
+    }
+
+    if (GetFileAttributesW(logPath.c_str()) != INVALID_FILE_ATTRIBUTES)
+    {
+        ShellExecuteW(nullptr, L"open", logPath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        return;
+    }
+
+    size_t pos = logPath.find_last_of(L"\\/");
+    if (pos != std::wstring::npos)
+    {
+        std::wstring folder = logPath.substr(0, pos);
+        ShellExecuteW(nullptr, L"open", folder.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    }
 }
 
 // ============================================================================

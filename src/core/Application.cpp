@@ -182,7 +182,6 @@ void Application::Cleanup()
     }
 
     // Cleanup dialogs (smart pointers will handle deletion)
-    m_pSettingsDialog.reset();
 
     // Cleanup config manager
     m_pConfigManager.reset();

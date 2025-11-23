@@ -83,6 +83,9 @@ void ShowErrorMessage(const std::wstring& message, const std::wstring& title = L
  */
 void CenterWindowOnScreen(HWND hWnd);
 
+// Open the application log file (or its folder) in the default handler
+void OpenLogFileInExplorer();
+
 } // namespace NetworkMonitor
 
 #endif // NETWORK_MONITOR_UTILS_H
