@@ -444,6 +444,40 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
         }
     }
 
+    int oldBkMode = SetBkMode(hdc, TRANSPARENT);
+
+    int legendX = inner.left + 8;
+    int legendY = inner.top + 8;
+
+    SelectObject(hdc, downPen);
+    MoveToEx(hdc, legendX, legendY, nullptr);
+    LineTo(hdc, legendX + 20, legendY);
+
+    std::wstring downLabel = LoadStringResource(IDS_DASHBOARD_COL_DOWN);
+    if (downLabel.empty())
+    {
+        downLabel = L"Down";
+    }
+
+    SetTextColor(hdc, GetSysColor(COLOR_WINDOWTEXT));
+    TextOutW(hdc, legendX + 24, legendY - 6, downLabel.c_str(), static_cast<int>(downLabel.size()));
+
+    legendY += 14;
+
+    SelectObject(hdc, upPen);
+    MoveToEx(hdc, legendX, legendY, nullptr);
+    LineTo(hdc, legendX + 20, legendY);
+
+    std::wstring upLabel = LoadStringResource(IDS_DASHBOARD_COL_UP);
+    if (upLabel.empty())
+    {
+        upLabel = L"Up";
+    }
+
+    TextOutW(hdc, legendX + 24, legendY - 6, upLabel.c_str(), static_cast<int>(upLabel.size()));
+
+    SetBkMode(hdc, oldBkMode);
+
     SelectObject(hdc, oldPen);
     DeleteObject(borderPen);
     DeleteObject(downPen);
