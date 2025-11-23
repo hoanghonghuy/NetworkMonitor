@@ -8,7 +8,9 @@ build/
 .vs/
 *.user
 *.suo
+*.aps
 
 # Temporary files
 *.log
 *.tmp
+UpgradeLog*.htm
