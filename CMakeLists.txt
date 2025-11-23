@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.15)
 project(NetworkMonitor
     VERSION 1.0.0
     DESCRIPTION "Network Traffic Monitor for Windows System Tray"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 # Set C++ standard
@@ -88,6 +88,13 @@ set(SOURCE_FILES
     third_party/sqlite/sqlite3.c
 )
 
+if(MSVC)
+    # Suppress deprecated GetVersionEx warnings in third-party SQLite only
+    set_source_files_properties(third_party/sqlite/sqlite3.c PROPERTIES
+        COMPILE_FLAGS "/wd4996"
+    )
+endif()
+
 # Resource files
 set(RESOURCE_FILES
     resources/app.rc
@@ -145,8 +152,9 @@ source_group("Resource Files" FILES ${RESOURCE_FILES})
 
 if(MSVC)
     # Set subsystem to Windows (GUI application)
+    # Rely on the default CRT entry point that matches our WinMain signature.
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:wWinMainCRTStartup"
+        LINK_FLAGS "/SUBSYSTEM:WINDOWS"
     )
     
     # Set output directories

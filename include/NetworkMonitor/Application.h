@@ -12,7 +12,6 @@
 #include "NetworkMonitor/NetworkMonitor.h"
 #include "NetworkMonitor/TrayIcon.h"
 #include "NetworkMonitor/TaskbarOverlay.h"
-#include "NetworkMonitor/SettingsDialog.h"
 #include <windows.h>
 #include <memory>
 
@@ -74,7 +73,6 @@ private:
     std::unique_ptr<TaskbarOverlay> m_pTaskbarOverlay;
 
     // Dialog instances (only SettingsDialog is owned here for now)
-    std::unique_ptr<SettingsDialog> m_pSettingsDialog;
 
     // Application state
     AppConfig m_config;

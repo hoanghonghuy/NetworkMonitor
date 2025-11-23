@@ -5,20 +5,10 @@
 // ============================================================================
 
 #include "NetworkMonitor/Common.h"
-#include "NetworkMonitor/NetworkMonitor.h"
-#include "NetworkMonitor/TrayIcon.h"
-#include "NetworkMonitor/ConfigManager.h"
-#include "NetworkMonitor/TaskbarOverlay.h"
 #include "NetworkMonitor/Utils.h"
-#include "NetworkMonitor/HistoryLogger.h"
 #include "NetworkMonitor/Application.h"
 #include "../../resources/resource.h"
 #include <windows.h>
-#include <windowsx.h>
-#include <commctrl.h>
-#include <vector>
-#include <limits>
-#include <algorithm>
 // ============================================================================
 // WINMAIN - APPLICATION ENTRY POINT
 // ============================================================================

@@ -6,7 +6,6 @@
 
 #include "NetworkMonitor/ConfigManager.h"
 #include "NetworkMonitor/Utils.h"
-#include <shlobj.h>
 
 namespace NetworkMonitor
 {
