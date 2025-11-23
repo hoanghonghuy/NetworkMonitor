@@ -35,6 +35,7 @@ private:
     void UpdateDashboardData(HWND hDlg);
     void DrawDashboardChart(HDC hdc, const RECT& rc);
     void CenterDialogOnScreen(HWND hDlg);
+    void ExportRecentHistoryToCsv(HWND hDlg);
 
     // Member variables
     HWND m_hDialog;

@@ -12,9 +12,11 @@
 #include "../../../resources/resource.h"
 #include <windowsx.h>
 #include <commctrl.h>
+#include <commdlg.h>
 #include <algorithm>
 #include <sstream>
 #include <ctime>
+#include <fstream>
 
 // Fix Windows macro conflicts
 #undef max
@@ -207,6 +209,12 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
                     return TRUE;
                 }
 
+                case IDC_DASHBOARD_BUTTON_EXPORT:
+                {
+                    ExportRecentHistoryToCsv(hDlg);
+                    return TRUE;
+                }
+
                 case IDOK:
                 case IDCANCEL:
                 {
@@ -317,6 +325,85 @@ void DashboardDialog::UpdateDashboardData(HWND hDlg)
         ListView_SetColumnWidth(hList, 1, LVSCW_AUTOSIZE_USEHEADER);
         ListView_SetColumnWidth(hList, 2, LVSCW_AUTOSIZE_USEHEADER);
         ListView_SetColumnWidth(hList, 3, LVSCW_AUTOSIZE_USEHEADER);
+    }
+}
+
+void DashboardDialog::ExportRecentHistoryToCsv(HWND hDlg)
+{
+    wchar_t filePath[MAX_PATH] = {};
+
+    OPENFILENAMEW ofn = {};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = hDlg;
+    ofn.lpstrFilter = L"CSV files (*.csv)\0*.csv\0All files (*.*)\0*.*\0";
+    ofn.lpstrFile = filePath;
+    ofn.nMaxFile = static_cast<DWORD>(sizeof(filePath) / sizeof(wchar_t));
+    ofn.lpstrDefExt = L"csv";
+    ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+
+    if (!GetSaveFileNameW(&ofn))
+    {
+        return; // User cancelled
+    }
+
+    std::wstring path(filePath);
+    if (path.empty())
+    {
+        return;
+    }
+
+    HistoryLogger& logger = HistoryLogger::Instance();
+    const std::wstring* ifaceFilter = nullptr;
+
+    if (m_pConfig && !m_pConfig->selectedInterface.empty())
+    {
+        ifaceFilter = &m_pConfig->selectedInterface;
+    }
+
+    std::vector<HistorySample> samples;
+    if (!logger.GetRecentSamples(1000, samples, ifaceFilter, false))
+    {
+        MessageBoxW(hDlg, L"Failed to query history samples.", L"Export CSV", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    if (samples.empty())
+    {
+        MessageBoxW(hDlg, L"No history data available to export.", L"Export CSV", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+
+    std::wofstream file(path);
+    if (!file.is_open())
+    {
+        MessageBoxW(hDlg, L"Failed to create CSV file.", L"Export CSV", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    file << L"Time,Interface,BytesDown,BytesUp" << L"\n";
+
+    for (const auto& sample : samples)
+    {
+        wchar_t timeBuffer[64] = {};
+        std::tm localTime = {};
+        std::time_t ts = sample.timestamp;
+        if (localtime_s(&localTime, &ts) == 0)
+        {
+            wcsftime(timeBuffer, sizeof(timeBuffer) / sizeof(wchar_t), L"%Y-%m-%d %H:%M:%S", &localTime);
+        }
+
+        std::wstring iface = sample.interfaceName;
+        if (iface.empty())
+        {
+            iface = LoadStringResource(IDS_ALL_INTERFACES);
+            if (iface.empty())
+            {
+                iface = L"All Interfaces";
+            }
+        }
+
+        file << timeBuffer << L"," << iface << L","
+             << sample.bytesDown << L"," << sample.bytesUp << L"\n";
     }
 }
 
