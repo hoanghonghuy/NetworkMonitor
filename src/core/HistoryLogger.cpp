@@ -5,6 +5,7 @@
 // ============================================================================
 
 #include "NetworkMonitor/HistoryLogger.h"
+#include "NetworkMonitor/Utils.h"
 
 #include <cwchar>   // wcsrchr
 #include <ctime>
@@ -51,6 +52,7 @@ void HistoryLogger::InitializeSQLite()
     wchar_t exePath[MAX_PATH] = {0};
     if (!GetModuleFileNameW(nullptr, exePath, MAX_PATH))
     {
+        LogError(L"HistoryLogger::InitializeSQLite: GetModuleFileNameW failed: " + GetLastErrorString());
         ShutdownSQLite();
         return;
     }
@@ -64,8 +66,15 @@ void HistoryLogger::InitializeSQLite()
     wchar_t dbPath[MAX_PATH] = {0};
     swprintf_s(dbPath, L"%s\\network_usage.db", exePath);
 
-    if (sqlite3_open16(dbPath, &m_db) != SQLITE_OK || !m_db)
+    int openRc = sqlite3_open16(dbPath, &m_db);
+    if (openRc != SQLITE_OK || !m_db)
     {
+        LogError(L"HistoryLogger::InitializeSQLite: sqlite3_open16 failed, rc=" + std::to_wstring(openRc));
+        if (m_db)
+        {
+            sqlite3_close(m_db);
+            m_db = nullptr;
+        }
         return;
     }
 
@@ -79,7 +88,11 @@ void HistoryLogger::InitializeSQLite()
         "bytes_up INTEGER NOT NULL);"
         "CREATE INDEX IF NOT EXISTS idx_usage_ts ON usage(timestamp);";
 
-    sqlite3_exec(m_db, createSql, nullptr, nullptr, nullptr);
+    int createRc = sqlite3_exec(m_db, createSql, nullptr, nullptr, nullptr);
+    if (createRc != SQLITE_OK)
+    {
+        LogError(L"HistoryLogger::InitializeSQLite: sqlite3_exec(create table) failed, rc=" + std::to_wstring(createRc));
+    }
 
     m_sqliteAvailable = true;
 }
@@ -132,6 +145,7 @@ bool HistoryLogger::InsertSampleSQLite(std::time_t ts,
     int rc = sqlite3_prepare16_v2(m_db, INSERT_SQL, -1, &stmt, nullptr);
     if (rc != SQLITE_OK || !stmt)
     {
+        LogError(L"HistoryLogger::InsertSampleSQLite: sqlite3_prepare16_v2 failed, rc=" + std::to_wstring(rc));
         return false;
     }
 
@@ -141,6 +155,10 @@ bool HistoryLogger::InsertSampleSQLite(std::time_t ts,
     sqlite3_bind_int64(stmt, 4, static_cast<sqlite3_int64>(up));
 
     rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE && rc != SQLITE_OK)
+    {
+        LogError(L"HistoryLogger::InsertSampleSQLite: sqlite3_step failed, rc=" + std::to_wstring(rc));
+    }
     sqlite3_finalize(stmt);
 
     return (rc == SQLITE_DONE || rc == SQLITE_OK);
@@ -155,6 +173,7 @@ bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long 
     EnsureInitialized();
     if (!m_sqliteAvailable || !m_db)
     {
+        LogError(L"HistoryLogger::GetTotalsToday: SQLite not available");
         return false;
     }
 
@@ -162,6 +181,7 @@ bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long 
     std::tm localTime = {};
     if (localtime_s(&localTime, &now) != 0)
     {
+        LogError(L"HistoryLogger::GetTotalsToday: localtime_s failed");
         return false;
     }
 
@@ -172,6 +192,7 @@ bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long 
     std::time_t start = std::mktime(&localTime);
     if (start == static_cast<std::time_t>(-1))
     {
+        LogError(L"HistoryLogger::GetTotalsToday: mktime(start) failed");
         return false;
     }
 
@@ -193,6 +214,7 @@ bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long 
     int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK || !stmt)
     {
+        LogError(L"HistoryLogger::GetTotalsToday: sqlite3_prepare_v2 failed, rc=" + std::to_wstring(rc));
         return false;
     }
 
@@ -213,6 +235,11 @@ bool HistoryLogger::GetTotalsToday(unsigned long long& totalDown, unsigned long 
 
     sqlite3_finalize(stmt);
 
+    if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+    {
+        LogError(L"HistoryLogger::GetTotalsToday: sqlite3_step failed, rc=" + std::to_wstring(rc));
+    }
+
     return (rc == SQLITE_ROW || rc == SQLITE_DONE);
 }
 
@@ -225,6 +252,7 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
     EnsureInitialized();
     if (!m_sqliteAvailable || !m_db)
     {
+        LogError(L"HistoryLogger::GetTotalsThisMonth: SQLite not available");
         return false;
     }
 
@@ -232,6 +260,7 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
     std::tm startTm = {};
     if (localtime_s(&startTm, &now) != 0)
     {
+        LogError(L"HistoryLogger::GetTotalsThisMonth: localtime_s failed");
         return false;
     }
 
@@ -243,6 +272,7 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
     std::time_t start = std::mktime(&startTm);
     if (start == static_cast<std::time_t>(-1))
     {
+        LogError(L"HistoryLogger::GetTotalsThisMonth: mktime(start) failed");
         return false;
     }
 
@@ -257,6 +287,7 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
     std::time_t end = std::mktime(&endTm);
     if (end == static_cast<std::time_t>(-1))
     {
+        LogError(L"HistoryLogger::GetTotalsThisMonth: mktime(end) failed");
         return false;
     }
 
@@ -276,6 +307,7 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
     int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK || !stmt)
     {
+        LogError(L"HistoryLogger::GetTotalsThisMonth: sqlite3_prepare_v2 failed, rc=" + std::to_wstring(rc));
         return false;
     }
 
@@ -295,6 +327,11 @@ bool HistoryLogger::GetTotalsThisMonth(unsigned long long& totalDown, unsigned l
     }
 
     sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+    {
+        LogError(L"HistoryLogger::GetTotalsThisMonth: sqlite3_step failed, rc=" + std::to_wstring(rc));
+    }
 
     return (rc == SQLITE_ROW || rc == SQLITE_DONE);
 }
@@ -364,6 +401,7 @@ bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outS
     int rc = sqlite3_prepare_v2(m_db, sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK || !stmt)
     {
+        LogError(L"HistoryLogger::GetRecentSamples: sqlite3_prepare_v2 failed, rc=" + std::to_wstring(rc));
         return false;
     }
 
@@ -402,6 +440,32 @@ bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outS
 
     sqlite3_finalize(stmt);
 
+    if (rc != SQLITE_DONE)
+    {
+        LogError(L"HistoryLogger::GetRecentSamples: sqlite3_step ended with rc=" + std::to_wstring(rc));
+    }
+
+    if (outSamples.empty())
+    {
+        std::wstring info = L"HistoryLogger::GetRecentSamples: no samples returned (limit="
+            + std::to_wstring(limit)
+            + L", onlyToday=" + (onlyToday ? L"true" : L"false")
+            + L", interfaceFilter="
+            + ((interfaceFilter && !interfaceFilter->empty()) ? *interfaceFilter : L"<none>");
+        LogDebug(info);
+    }
+    else
+    {
+        std::wstring info = L"HistoryLogger::GetRecentSamples: "
+            + std::to_wstring(static_cast<unsigned long long>(outSamples.size()))
+            + L" samples returned (limit="
+            + std::to_wstring(limit)
+            + L", onlyToday=" + (onlyToday ? L"true" : L"false")
+            + L", interfaceFilter="
+            + ((interfaceFilter && !interfaceFilter->empty()) ? *interfaceFilter : L"<none>");
+        LogDebug(info);
+    }
+
     return (rc == SQLITE_DONE);
 }
 
@@ -410,12 +474,20 @@ bool HistoryLogger::DeleteAll()
     EnsureInitialized();
     if (!m_sqliteAvailable || !m_db)
     {
+        LogError(L"HistoryLogger::DeleteAll: SQLite not available");
         return false;
     }
 
     const char* sql = "DELETE FROM usage;";
     int rc = sqlite3_exec(m_db, sql, nullptr, nullptr, nullptr);
-    return (rc == SQLITE_OK || rc == SQLITE_DONE);
+    if (rc != SQLITE_OK && rc != SQLITE_DONE)
+    {
+        LogError(L"HistoryLogger::DeleteAll: sqlite3_exec failed, rc=" + std::to_wstring(rc));
+        return false;
+    }
+
+    LogDebug(L"HistoryLogger::DeleteAll: deleted all history records");
+    return true;
 }
 
 bool HistoryLogger::TrimToRecentDays(int days)
@@ -440,6 +512,7 @@ bool HistoryLogger::TrimToRecentDays(int days)
     int rc = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK || !stmt)
     {
+        LogError(L"HistoryLogger::TrimToRecentDays: sqlite3_prepare_v2 failed, rc=" + std::to_wstring(rc));
         return false;
     }
 
@@ -448,7 +521,14 @@ bool HistoryLogger::TrimToRecentDays(int days)
     rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
 
-    return (rc == SQLITE_DONE || rc == SQLITE_OK);
+    if (rc != SQLITE_DONE && rc != SQLITE_OK)
+    {
+        LogError(L"HistoryLogger::TrimToRecentDays: sqlite3_step failed, rc=" + std::to_wstring(rc));
+        return false;
+    }
+
+    LogDebug(L"HistoryLogger::TrimToRecentDays: trimmed history to last " + std::to_wstring(days) + L" days");
+    return true;
 }
 
 } // namespace NetworkMonitor

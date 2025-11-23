@@ -20,6 +20,7 @@ namespace NetworkMonitor
 SettingsDialog::SettingsDialog()
     : m_hDialog(nullptr)
     , m_pConfigManager(nullptr)
+    , m_pNetworkMonitor(nullptr)
     , m_isInitializing(false)
 {
 }
@@ -28,7 +29,7 @@ SettingsDialog::~SettingsDialog()
 {
 }
 
-bool SettingsDialog::Show(HWND parentWindow, ConfigManager* configManager)
+bool SettingsDialog::Show(HWND parentWindow, ConfigManager* configManager, NetworkMonitorClass* networkMonitor)
 {
     if (!configManager)
     {
@@ -36,6 +37,7 @@ bool SettingsDialog::Show(HWND parentWindow, ConfigManager* configManager)
     }
 
     m_pConfigManager = configManager;
+    m_pNetworkMonitor = networkMonitor;
     m_isInitializing = true;
 
     // Load current config into working copy
@@ -146,6 +148,12 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
             if (!loggingText.empty())
             {
                 SetDlgItemTextW(hDlg, IDC_ENABLE_LOGGING_CHECK, loggingText.c_str());
+            }
+
+            std::wstring debugLogText = LoadStringResource(IDS_SETTINGS_LABEL_DEBUGLOGGING);
+            if (!debugLogText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_DEBUG_LOGGING_CHECK, debugLogText.c_str());
             }
 
             std::wstring unitLabelText = LoadStringResource(IDS_SETTINGS_LABEL_SPEED_UNIT);
@@ -358,6 +366,7 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
     // Set checkbox states (only controls that exist in current dialog)
     Button_SetCheck(GetDlgItem(hDlg, IDC_AUTOSTART_CHECK), m_configCopy.autoStart ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(GetDlgItem(hDlg, IDC_ENABLE_LOGGING_CHECK), m_configCopy.enableLogging ? BST_CHECKED : BST_UNCHECKED);
+    Button_SetCheck(GetDlgItem(hDlg, IDC_DEBUG_LOGGING_CHECK), m_configCopy.debugLogging ? BST_CHECKED : BST_UNCHECKED);
 
     // Populate history auto-trim combo
     HWND hTrim = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
@@ -444,6 +453,7 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     // Get checkbox states
     bool newAutoStart = (Button_GetCheck(GetDlgItem(hDlg, IDC_AUTOSTART_CHECK)) == BST_CHECKED);
     bool newEnableLogging = (Button_GetCheck(GetDlgItem(hDlg, IDC_ENABLE_LOGGING_CHECK)) == BST_CHECKED);
+    bool newDebugLogging = (Button_GetCheck(GetDlgItem(hDlg, IDC_DEBUG_LOGGING_CHECK)) == BST_CHECKED);
 
     // Get interface selection
     std::wstring newInterface = m_configCopy.selectedInterface;
@@ -503,6 +513,7 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     m_configCopy.displayUnit = newUnit;
     m_configCopy.autoStart = newAutoStart;
     m_configCopy.enableLogging = newEnableLogging;
+    m_configCopy.debugLogging = newDebugLogging;
     m_configCopy.selectedInterface = newInterface;
     m_configCopy.historyAutoTrimDays = newTrimDays;
     m_configCopy.language = newLanguage;
@@ -541,7 +552,36 @@ void SettingsDialog::PopulateInterfaceCombo(HWND hDlg)
 
     // TODO: When NetworkMonitorClass is available here, enumerate real interfaces.
     // For now, add the currently selected interface (if any) so the user sees it.
-    if (!m_configCopy.selectedInterface.empty())
+    if (m_pNetworkMonitor)
+    {
+        std::vector<NetworkStats> statsList = m_pNetworkMonitor->GetAllStats();
+        int selectedIdx = -1;
+
+        for (const auto& stats : statsList)
+        {
+            if (stats.interfaceName.empty())
+            {
+                continue;
+            }
+
+            int idx = ComboBox_AddString(hInterface, stats.interfaceName.c_str());
+            if (stats.interfaceName == m_configCopy.selectedInterface)
+            {
+                selectedIdx = idx;
+            }
+        }
+
+        if (selectedIdx >= 0)
+        {
+            ComboBox_SetCurSel(hInterface, selectedIdx);
+        }
+        else if (!m_configCopy.selectedInterface.empty())
+        {
+            int idx = ComboBox_AddString(hInterface, m_configCopy.selectedInterface.c_str());
+            ComboBox_SetCurSel(hInterface, idx);
+        }
+    }
+    else if (!m_configCopy.selectedInterface.empty())
     {
         int idx = ComboBox_AddString(hInterface, m_configCopy.selectedInterface.c_str());
         ComboBox_SetCurSel(hInterface, idx);
@@ -550,22 +590,7 @@ void SettingsDialog::PopulateInterfaceCombo(HWND hDlg)
 
 void SettingsDialog::CenterDialogOnScreen(HWND hDlg)
 {
-    RECT rc = {0};
-    if (!GetWindowRect(hDlg, &rc))
-    {
-        return;
-    }
-
-    int dlgWidth = rc.right - rc.left;
-    int dlgHeight = rc.bottom - rc.top;
-
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
-    int posX = (screenWidth - dlgWidth) / 2;
-    int posY = (screenHeight - dlgHeight) / 2;
-
-    SetWindowPos(hDlg, nullptr, posX, posY, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+    CenterWindowOnScreen(hDlg);
 }
 
 } // namespace NetworkMonitor

@@ -41,6 +41,8 @@ bool Application::Initialize(HINSTANCE hInstance)
 
     m_hInstance = hInstance;
 
+    LogDebug(L"Application::Initialize: starting");
+
     // Initialize common controls
     INITCOMMONCONTROLSEX icc = {};
     icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
@@ -71,6 +73,8 @@ bool Application::Initialize(HINSTANCE hInstance)
         // Use default config if load fails
         m_config = AppConfig();
     }
+
+    SetDebugLoggingEnabled(m_config.debugLogging);
 
     // Apply UI language preference (for STRINGTABLE resources)
     ApplyLanguageFromConfig();
@@ -125,6 +129,7 @@ bool Application::Initialize(HINSTANCE hInstance)
     SetTimer(m_hwnd, TIMER_UPDATE_NETWORK, m_config.updateInterval, nullptr);
 
     m_initialized = true;
+    LogDebug(L"Application::Initialize: succeeded");
     return true;
 }
 
@@ -152,6 +157,8 @@ void Application::Cleanup()
     {
         return;
     }
+
+    LogDebug(L"Application::Cleanup: starting");
 
     // Stop network monitoring
     if (m_pNetworkMonitor)
@@ -188,6 +195,7 @@ void Application::Cleanup()
     }
 
     m_initialized = false;
+    LogDebug(L"Application::Cleanup: completed");
 }
 
 bool Application::LoadConfig()
@@ -247,7 +255,7 @@ void Application::ShowSettingsDialog()
     AppConfig oldConfig = m_config;
 
     SettingsDialog dlg;
-    if (!dlg.Show(m_hwnd, m_pConfigManager.get()))
+    if (!dlg.Show(m_hwnd, m_pConfigManager.get(), m_pNetworkMonitor.get()))
     {
         // User cancelled or dialog failed
         return;
@@ -260,6 +268,8 @@ void Application::ShowSettingsDialog()
         m_config = oldConfig;
         return;
     }
+
+    SetDebugLoggingEnabled(m_config.debugLogging);
 
     // Propagate updated config to tray icon
     if (m_pTrayIcon)
@@ -618,22 +628,7 @@ bool Application::CreateMainWindow()
 
 void Application::CenterDialogOnScreen(HWND hDlg)
 {
-    RECT rc = {0};
-    if (!GetWindowRect(hDlg, &rc))
-    {
-        return;
-    }
-
-    int dlgWidth = rc.right - rc.left;
-    int dlgHeight = rc.bottom - rc.top;
-
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
-    int posX = (screenWidth - dlgWidth) / 2;
-    int posY = (screenHeight - dlgHeight) / 2;
-
-    SetWindowPos(hDlg, nullptr, posX, posY, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+    CenterWindowOnScreen(hDlg);
 }
 
 } // namespace NetworkMonitor

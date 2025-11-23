@@ -7,9 +7,12 @@
 #include "NetworkMonitor/Utils.h"
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 
 namespace NetworkMonitor
 {
+
+static bool g_debugLoggingEnabled = false;
 
 // ============================================================================
 // STRING UTILITIES IMPLEMENTATION
@@ -243,7 +246,113 @@ std::wstring GetLastErrorString()
 
 void ShowErrorMessage(const std::wstring& message, const std::wstring& title)
 {
+    LogError(title + L": " + message);
     MessageBoxW(nullptr, message.c_str(), title.c_str(), MB_OK | MB_ICONERROR);
+}
+
+namespace
+{
+    std::wstring GetLogFilePath()
+    {
+        wchar_t buffer[MAX_PATH] = {0};
+        DWORD length = GetEnvironmentVariableW(L"LOCALAPPDATA", buffer, static_cast<DWORD>(MAX_PATH));
+
+        std::wstring basePath;
+        if (length == 0 || length >= MAX_PATH)
+        {
+            basePath = L".";
+        }
+        else
+        {
+            basePath.assign(buffer, length);
+        }
+
+        std::wstring dirPath = basePath + L"\\NetworkMonitor";
+        CreateDirectoryW(dirPath.c_str(), nullptr);
+
+        std::wstring filePath = dirPath + L"\\NetworkMonitor.log";
+        return filePath;
+    }
+
+    void AppendLogLine(const wchar_t* level, const std::wstring& message)
+    {
+        if (!level)
+        {
+            return;
+        }
+
+        SYSTEMTIME st = {};
+        GetLocalTime(&st);
+
+        wchar_t timeBuffer[32] = {0};
+        swprintf_s(timeBuffer, L"%04u-%02u-%02u %02u:%02u:%02u",
+                   st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+
+        std::wstring filePath = GetLogFilePath();
+
+        try
+        {
+            std::wofstream file(filePath, std::ios::app);
+            if (!file.is_open())
+            {
+                return;
+            }
+
+            file << timeBuffer << L" [" << level << L"] " << message << L"\n";
+        }
+        catch (...)
+        {
+        }
+    }
+}
+
+void LogDebug(const std::wstring& message)
+{
+    if (!g_debugLoggingEnabled)
+    {
+        return;
+    }
+
+    AppendLogLine(L"DEBUG", message);
+}
+
+void LogError(const std::wstring& message)
+{
+    AppendLogLine(L"ERROR", message);
+}
+
+void SetDebugLoggingEnabled(bool enabled)
+{
+    g_debugLoggingEnabled = enabled;
+}
+
+// ============================================================================
+// UI UTILITIES IMPLEMENTATION
+// ============================================================================
+
+void CenterWindowOnScreen(HWND hWnd)
+{
+    if (!hWnd)
+    {
+        return;
+    }
+
+    RECT rc = {0};
+    if (!GetWindowRect(hWnd, &rc))
+    {
+        return;
+    }
+
+    int dlgWidth = rc.right - rc.left;
+    int dlgHeight = rc.bottom - rc.top;
+
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+    int posX = (screenWidth - dlgWidth) / 2;
+    int posY = (screenHeight - dlgHeight) / 2;
+
+    SetWindowPos(hWnd, nullptr, posX, posY, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 }
 
 } // namespace NetworkMonitor

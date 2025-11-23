@@ -68,13 +68,20 @@ double GetElapsedSeconds(DWORD start, DWORD end);
  * @return Error message string
  */
 std::wstring GetLastErrorString();
+void LogDebug(const std::wstring& message);
+void LogError(const std::wstring& message);
+void SetDebugLoggingEnabled(bool enabled);
+void ShowErrorMessage(const std::wstring& message, const std::wstring& title = L"Error");
+
+// ============================================================================
+// UI UTILITIES
+// ============================================================================
 
 /**
- * Show error message box
- * @param message Error message
- * @param title Dialog title (optional)
+ * Center a window/dialog on the screen
+ * @param hWnd Handle to the window/dialog
  */
-void ShowErrorMessage(const std::wstring& message, const std::wstring& title = L"Error");
+void CenterWindowOnScreen(HWND hWnd);
 
 } // namespace NetworkMonitor
 

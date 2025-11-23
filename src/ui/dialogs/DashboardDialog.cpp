@@ -452,22 +452,7 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
 
 void DashboardDialog::CenterDialogOnScreen(HWND hDlg)
 {
-    RECT rc = {0};
-    if (!GetWindowRect(hDlg, &rc))
-    {
-        return;
-    }
-
-    int dlgWidth = rc.right - rc.left;
-    int dlgHeight = rc.bottom - rc.top;
-
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
-    int posX = (screenWidth - dlgWidth) / 2;
-    int posY = (screenHeight - dlgHeight) / 2;
-
-    SetWindowPos(hDlg, nullptr, posX, posY, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+    CenterWindowOnScreen(hDlg);
 }
 
 } // namespace NetworkMonitor

@@ -31,6 +31,7 @@ bool NetworkMonitorClass::Start()
     // Initialize by querying interfaces once
     if (!QueryNetworkInterfaces())
     {
+        LogError(L"NetworkMonitorClass::Start: initial QueryNetworkInterfaces failed");
         return false;
     }
 
@@ -100,6 +101,7 @@ bool NetworkMonitorClass::QueryNetworkInterfaces()
     DWORD result = GetIfTable2(&pIfTable);
     if (result != NO_ERROR)
     {
+        LogError(L"NetworkMonitorClass::QueryNetworkInterfaces: GetIfTable2 failed, error=" + std::to_wstring(result));
         return false;
     }
 
@@ -157,6 +159,7 @@ bool NetworkMonitorClass::QueryNetworkInterfaces()
     catch (...)
     {
         FreeMibTable(pIfTable);
+        LogError(L"NetworkMonitorClass::QueryNetworkInterfaces: exception while processing interface table");
         return false;
     }
 

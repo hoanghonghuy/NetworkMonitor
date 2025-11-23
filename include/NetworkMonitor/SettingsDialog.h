@@ -14,6 +14,7 @@ namespace NetworkMonitor
 {
 
 class ConfigManager;
+class NetworkMonitorClass;
 
 class SettingsDialog
 {
@@ -22,7 +23,7 @@ public:
     ~SettingsDialog();
 
     // Show the settings dialog modally
-    bool Show(HWND parentWindow, ConfigManager* configManager);
+    bool Show(HWND parentWindow, ConfigManager* configManager, NetworkMonitorClass* networkMonitor);
 
     // Set callback for when settings are applied
     void SetSettingsChangedCallback(std::function<void()> callback);
@@ -41,6 +42,7 @@ private:
     // Member variables
     HWND m_hDialog;
     ConfigManager* m_pConfigManager;
+    NetworkMonitorClass* m_pNetworkMonitor;
     AppConfig m_configCopy;  // Working copy of config
     std::function<void()> m_settingsChangedCallback;
     bool m_isInitializing;   // Prevent recursive updates during initialization

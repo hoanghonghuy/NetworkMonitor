@@ -146,6 +146,7 @@ struct AppConfig
     bool showUploadSpeed;            // Show upload speed
     bool showDownloadSpeed;          // Show download speed
     bool enableLogging;              // Enable history logging
+    bool debugLogging;               // Enable debug logging to file
     int historyAutoTrimDays;
     AppLanguage language;            // UI language
     std::wstring selectedInterface;  // Selected interface name (empty = all)
@@ -157,6 +158,7 @@ struct AppConfig
         , showUploadSpeed(true)
         , showDownloadSpeed(true)
         , enableLogging(true)
+        , debugLogging(false)
         , historyAutoTrimDays(DEFAULT_HISTORY_AUTO_TRIM_DAYS)
         , language(AppLanguage::SystemDefault)
         , selectedInterface(L"")
