@@ -19,7 +19,7 @@ public:
     ~HistoryDialog();
 
     // Show the history management dialog modally
-    bool Show(HWND parentWindow);
+    bool Show(HWND parentWindow, const AppConfig* config);
 
 private:
     // Dialog procedure
@@ -32,6 +32,7 @@ private:
 
     // Member variables
     HWND m_hDialog;
+    const AppConfig* m_pConfig;
 };
 
 } // namespace NetworkMonitor

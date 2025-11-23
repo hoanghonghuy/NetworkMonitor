@@ -60,6 +60,8 @@ public:
      */
     void SetRightClickCallback(std::function<void()> callback);
 
+    void SetDarkTheme(bool dark);
+
 private:
     /**
      * Register window class
@@ -133,6 +135,7 @@ private:
     double m_downloadSpeed;                     // Current download speed
     double m_uploadSpeed;                       // Current upload speed
     SpeedUnit m_displayUnit;                    // Display unit
+    bool m_darkTheme;
 
     // Callback
     std::function<void()> m_rightClickCallback; // Right-click callback

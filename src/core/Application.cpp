@@ -123,6 +123,8 @@ bool Application::Initialize(HINSTANCE hInstance)
 
         // Show overlay by default
         m_pTaskbarOverlay->Show(true);
+
+        m_pTaskbarOverlay->SetDarkTheme(m_config.darkTheme);
     }
 
     // Start timer for network monitoring updates
@@ -276,6 +278,11 @@ void Application::ShowSettingsDialog()
         m_pTrayIcon->SetConfigSource(&m_config);
     }
 
+    if (m_pTaskbarOverlay)
+    {
+        m_pTaskbarOverlay->SetDarkTheme(m_config.darkTheme);
+    }
+
     // Apply side-effects similar to ApplySettingsFromDialog in main.cpp
     bool needsTimerUpdate = (m_config.updateInterval != oldConfig.updateInterval);
     bool historyChanged = (m_config.historyAutoTrimDays != oldConfig.historyAutoTrimDays);
@@ -310,7 +317,7 @@ void Application::ShowDashboardDialog()
 void Application::ShowHistoryDialog()
 {
     HistoryDialog dlg;
-    dlg.Show(m_hwnd);
+    dlg.Show(m_hwnd, &m_config);
 }
 
 void Application::ShowAboutDialog()

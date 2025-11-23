@@ -16,6 +16,7 @@ namespace NetworkMonitor
 
 HistoryDialog::HistoryDialog()
     : m_hDialog(nullptr)
+    , m_pConfig(nullptr)
 {
 }
 
@@ -23,8 +24,9 @@ HistoryDialog::~HistoryDialog()
 {
 }
 
-bool HistoryDialog::Show(HWND parentWindow)
+bool HistoryDialog::Show(HWND parentWindow, const AppConfig* config)
 {
+    m_pConfig = config;
     // Create modal dialog
     INT_PTR result = DialogBoxParamW(
         GetModuleHandleW(nullptr),
@@ -102,6 +104,27 @@ INT_PTR CALLBACK HistoryDialog::InstanceDialogProc(HWND hDlg, UINT message, WPAR
             }
 
             return TRUE;
+        }
+
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORBTN:
+        {
+            if (m_pConfig && m_pConfig->darkTheme)
+            {
+                HDC hdc = reinterpret_cast<HDC>(wParam);
+                static HBRUSH s_darkBrush = nullptr;
+                if (!s_darkBrush)
+                {
+                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
+                }
+
+                SetTextColor(hdc, RGB(230, 230, 230));
+                SetBkMode(hdc, TRANSPARENT);
+
+                return reinterpret_cast<INT_PTR>(s_darkBrush);
+            }
+            break;
         }
 
         case WM_COMMAND:

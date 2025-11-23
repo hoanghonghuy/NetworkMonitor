@@ -123,6 +123,7 @@ BEGIN
     IDS_SETTINGS_LABEL_AUTOTRIM      "Auto delete older than:"
     IDS_SETTINGS_LABEL_DEBUGLOGGING  "Enable debug logging"
     IDS_SETTINGS_BUTTON_OPEN_LOG     "Open log file..."
+    IDS_SETTINGS_LABEL_DARK_THEME    "Use dark theme"
     IDS_DASHBOARD_TITLE              "Network Usage Dashboard"
     IDS_DASHBOARD_LABEL_TODAY        "Today:"
     IDS_DASHBOARD_LABEL_THIS_MONTH   "This month:"
@@ -205,6 +206,7 @@ BEGIN
     IDS_SETTINGS_LABEL_AUTOTRIM      "Tự xóa cũ hơn:"
     IDS_SETTINGS_LABEL_DEBUGLOGGING  "Bật debug logging"
     IDS_SETTINGS_BUTTON_OPEN_LOG     "Mở file log..."
+    IDS_SETTINGS_LABEL_DARK_THEME    "Giao diện tối"
     IDS_DASHBOARD_TITLE              "Bảng theo dõi lưu lượng"
     IDS_DASHBOARD_LABEL_TODAY        "Hôm nay:"
     IDS_DASHBOARD_LABEL_THIS_MONTH   "Tháng này:"
@@ -301,6 +303,7 @@ BEGIN
     COMBOBOX        IDC_UPDATE_INTERVAL_COMBO,90,105,80,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Speed Unit:",IDC_STATIC,180,107,60,8
     COMBOBOX        IDC_DISPLAY_UNIT_COMBO,240,105,40,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Dark theme",IDC_DARK_THEME_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,122,80,10
 
     // Network & History
     GROUPBOX        "Network && History",IDC_SETTINGS_GROUP_NETWORK,7,155,286,44

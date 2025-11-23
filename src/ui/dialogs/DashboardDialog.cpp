@@ -174,6 +174,13 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
                 col.iSubItem = 3;
                 col.fmt = LVCFMT_RIGHT;
                 ListView_InsertColumn(hList, 3, &col);
+
+                if (m_pConfig && m_pConfig->darkTheme)
+                {
+                    ListView_SetBkColor(hList, RGB(24, 24, 24));
+                    ListView_SetTextBkColor(hList, RGB(24, 24, 24));
+                    ListView_SetTextColor(hList, RGB(230, 230, 230));
+                }
             }
 
             // Fill data
@@ -201,7 +208,7 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
                 {
                     // Use HistoryDialog class instead of legacy main.cpp dialog
                     HistoryDialog dlg;
-                    dlg.Show(hDlg);
+                    dlg.Show(hDlg, m_pConfig);
                     // After user modifies history, refresh dashboard view
                     PostMessageW(hDlg, WM_COMMAND, MAKEWPARAM(IDC_DASHBOARD_REFRESH, 0), 0);
                     return TRUE;
@@ -213,6 +220,27 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
                     EndDialog(hDlg, LOWORD(wParam));
                     return TRUE;
                 }
+            }
+            break;
+        }
+
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORBTN:
+        {
+            if (m_pConfig && m_pConfig->darkTheme)
+            {
+                HDC hdc = reinterpret_cast<HDC>(wParam);
+                static HBRUSH s_darkBrush = nullptr;
+                if (!s_darkBrush)
+                {
+                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
+                }
+
+                SetTextColor(hdc, RGB(230, 230, 230));
+                SetBkMode(hdc, TRANSPARENT);
+
+                return reinterpret_cast<INT_PTR>(s_darkBrush);
             }
             break;
         }
@@ -327,7 +355,14 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
         return;
     }
 
-    HBRUSH backBrush = CreateSolidBrush(GetSysColor(COLOR_WINDOW));
+    bool darkTheme = (m_pConfig && m_pConfig->darkTheme);
+
+    COLORREF backColor = darkTheme ? RGB(20, 20, 20) : GetSysColor(COLOR_WINDOW);
+    COLORREF borderColor = darkTheme ? RGB(80, 80, 80) : RGB(200, 200, 200);
+    COLORREF downColor = darkTheme ? RGB(80, 200, 120) : RGB(0, 128, 0);
+    COLORREF upColor = darkTheme ? RGB(80, 160, 240) : RGB(0, 0, 200);
+
+    HBRUSH backBrush = CreateSolidBrush(backColor);
     FillRect(hdc, &rc, backBrush);
     DeleteObject(backBrush);
 
@@ -366,7 +401,7 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
     inner.top += 4;
     inner.bottom -= 4;
 
-    HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
+    HPEN borderPen = CreatePen(PS_SOLID, 1, borderColor);
     HPEN oldPen = reinterpret_cast<HPEN>(SelectObject(hdc, borderPen));
     Rectangle(hdc, inner.left, inner.top, inner.right, inner.bottom);
 
@@ -421,8 +456,8 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
         upPoints.push_back(pu);
     }
 
-    HPEN downPen = CreatePen(PS_SOLID, 1, RGB(0, 128, 0));
-    HPEN upPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 200));
+    HPEN downPen = CreatePen(PS_SOLID, 1, downColor);
+    HPEN upPen = CreatePen(PS_SOLID, 1, upColor);
 
     SelectObject(hdc, downPen);
     if (!downPoints.empty())

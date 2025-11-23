@@ -155,6 +155,12 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 SetDlgItemTextW(hDlg, IDC_DEBUG_LOGGING_CHECK, debugLogText.c_str());
             }
 
+            std::wstring darkThemeText = LoadStringResource(IDS_SETTINGS_LABEL_DARK_THEME);
+            if (!darkThemeText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_DARK_THEME_CHECK, darkThemeText.c_str());
+            }
+
             std::wstring unitLabelText = LoadStringResource(IDS_SETTINGS_LABEL_SPEED_UNIT);
             if (!unitLabelText.empty())
             {
@@ -205,6 +211,27 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 case IDCANCEL:
                     EndDialog(hDlg, IDCANCEL);
                     return TRUE;
+            }
+            break;
+        }
+
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORBTN:
+        {
+            if (m_configCopy.darkTheme)
+            {
+                HDC hdc = reinterpret_cast<HDC>(wParam);
+                static HBRUSH s_darkBrush = nullptr;
+                if (!s_darkBrush)
+                {
+                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
+                }
+
+                SetTextColor(hdc, RGB(230, 230, 230));
+                SetBkMode(hdc, TRANSPARENT);
+
+                return reinterpret_cast<INT_PTR>(s_darkBrush);
             }
             break;
         }
@@ -378,6 +405,7 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
     Button_SetCheck(GetDlgItem(hDlg, IDC_AUTOSTART_CHECK), m_configCopy.autoStart ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(GetDlgItem(hDlg, IDC_ENABLE_LOGGING_CHECK), m_configCopy.enableLogging ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(GetDlgItem(hDlg, IDC_DEBUG_LOGGING_CHECK), m_configCopy.debugLogging ? BST_CHECKED : BST_UNCHECKED);
+    Button_SetCheck(GetDlgItem(hDlg, IDC_DARK_THEME_CHECK), m_configCopy.darkTheme ? BST_CHECKED : BST_UNCHECKED);
 
     // Populate history auto-trim combo
     HWND hTrim = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
@@ -465,6 +493,7 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     bool newAutoStart = (Button_GetCheck(GetDlgItem(hDlg, IDC_AUTOSTART_CHECK)) == BST_CHECKED);
     bool newEnableLogging = (Button_GetCheck(GetDlgItem(hDlg, IDC_ENABLE_LOGGING_CHECK)) == BST_CHECKED);
     bool newDebugLogging = (Button_GetCheck(GetDlgItem(hDlg, IDC_DEBUG_LOGGING_CHECK)) == BST_CHECKED);
+    bool newDarkTheme = (Button_GetCheck(GetDlgItem(hDlg, IDC_DARK_THEME_CHECK)) == BST_CHECKED);
 
     // Get interface selection
     std::wstring newInterface = m_configCopy.selectedInterface;
@@ -525,6 +554,7 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     m_configCopy.autoStart = newAutoStart;
     m_configCopy.enableLogging = newEnableLogging;
     m_configCopy.debugLogging = newDebugLogging;
+    m_configCopy.darkTheme = newDarkTheme;
     m_configCopy.selectedInterface = newInterface;
     m_configCopy.historyAutoTrimDays = newTrimDays;
     m_configCopy.language = newLanguage;

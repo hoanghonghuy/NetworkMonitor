@@ -30,6 +30,7 @@ void RunConfigManagerTests()
         : SpeedUnit::KiloBytesPerSecond;
 
     modified.debugLogging = !original.debugLogging;
+    modified.darkTheme = !original.darkTheme;
     modified.selectedInterface = L"TestInterface";
 
     bool saved = mgr.SaveConfig(modified);
@@ -45,6 +46,8 @@ void RunConfigManagerTests()
                L"ConfigManager round-trip displayUnit");
     AssertTrue(reloaded.debugLogging == modified.debugLogging,
                L"ConfigManager round-trip debugLogging");
+    AssertTrue(reloaded.darkTheme == modified.darkTheme,
+               L"ConfigManager round-trip darkTheme");
     AssertTrue(reloaded.selectedInterface == modified.selectedInterface,
                L"ConfigManager round-trip selectedInterface");
 
