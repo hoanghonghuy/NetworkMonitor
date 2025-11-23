@@ -76,6 +76,17 @@ cmake --build . --config Release
 
 3. Run `NetworkMonitor.exe` in `build/Release`.
 
+### Run tests with CMake
+
+To enable and run the test suite using CMake (Debug configuration):
+
+```bash
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --config Debug
+cd build
+ctest -C Debug --output-on-failure
+```
+
 ## Usage
 
 - After running, the application is located in the **system tray**.
