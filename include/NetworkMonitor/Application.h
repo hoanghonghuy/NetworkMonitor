@@ -65,6 +65,10 @@ private:
     bool RegisterWindowClass();
     bool CreateMainWindow();
     void CenterDialogOnScreen(HWND hDlg);
+    NetworkStats GetCurrentStatsForConfig();
+    void LogHistorySample(const NetworkStats& stats);
+    void UpdateTrayIcon(const NetworkStats& stats);
+    void UpdateTaskbarOverlay(const NetworkStats& stats);
 
     // Component instances (using smart pointers for automatic cleanup)
     std::unique_ptr<ConfigManager> m_pConfigManager;

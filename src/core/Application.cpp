@@ -10,6 +10,7 @@
 #include "NetworkMonitor/SettingsDialog.h"
 #include "NetworkMonitor/DashboardDialog.h"
 #include "NetworkMonitor/HistoryDialog.h"
+#include "NetworkMonitor/ThemeHelper.h"
 #include "../../resources/resource.h"
 #include <windowsx.h>
 #include <commctrl.h>
@@ -78,6 +79,12 @@ bool Application::Initialize(HINSTANCE hInstance)
 
     // Apply UI language preference (for STRINGTABLE resources)
     ApplyLanguageFromConfig();
+
+    // Initialize dark mode support for process-level elements (context
+    // menus, some common controls) based on the current system app theme
+    // so that shell-provided UI (like the tray menu) matches Windows.
+    bool systemDark = ThemeHelper::IsSystemInDarkMode();
+    ThemeHelper::AllowDarkModeForApp(systemDark);
 
     // Initialize history logger with auto-trim settings
     if (m_config.historyAutoTrimDays > 0)
@@ -272,6 +279,10 @@ void Application::ShowSettingsDialog()
 
     SetDebugLoggingEnabled(m_config.debugLogging);
 
+    // Keep process-level dark mode in sync with the current system app
+    // theme so that shell-provided menus remain consistent with Windows.
+    ThemeHelper::AllowDarkModeForApp(ThemeHelper::IsSystemInDarkMode());
+
     // Propagate updated config to tray icon
     if (m_pTrayIcon)
     {
@@ -347,7 +358,7 @@ void Application::ShowAboutDialog()
     message += L"\n\n";
     message += body;
 
-    MessageBoxW(m_hwnd, message.c_str(), title.c_str(), MB_OK | MB_ICONINFORMATION);
+    ShowDarkMessageBox(m_hwnd, message, title, MB_OK | MB_ICONINFORMATION, m_config.darkTheme);
 }
 
 void Application::OnTaskbarOverlayRightClick()
@@ -425,6 +436,23 @@ void Application::OnTimer()
     // Update network statistics
     m_pNetworkMonitor->Update();
 
+    NetworkStats stats = GetCurrentStatsForConfig();
+
+    if (m_config.enableLogging)
+    {
+        // History logging: record per-interval usage into SQLite
+        LogHistorySample(stats);
+    }
+
+    // Update tray icon
+    UpdateTrayIcon(stats);
+
+    // Update taskbar overlay
+    UpdateTaskbarOverlay(stats);
+}
+
+NetworkStats Application::GetCurrentStatsForConfig()
+{
     NetworkStats stats;
     bool useSpecificInterface = !m_config.selectedInterface.empty();
     if (useSpecificInterface)
@@ -444,67 +472,71 @@ void Application::OnTimer()
         stats = m_pNetworkMonitor->GetAggregatedStats();
     }
 
-    if (m_config.enableLogging)
+    return stats;
+}
+
+void Application::LogHistorySample(const NetworkStats& stats)
+{
+    unsigned long long totalDown = static_cast<unsigned long long>(stats.bytesReceived);
+    unsigned long long totalUp = static_cast<unsigned long long>(stats.bytesSent);
+
+    if (!m_prevTotalsValid)
     {
-        // History logging: record per-interval usage into SQLite
-        unsigned long long totalDown = static_cast<unsigned long long>(stats.bytesReceived);
-        unsigned long long totalUp = static_cast<unsigned long long>(stats.bytesSent);
-
-        if (!m_prevTotalsValid)
-        {
-            m_prevTotalBytesDown = totalDown;
-            m_prevTotalBytesUp = totalUp;
-            m_prevTotalsValid = true;
-        }
-        else
-        {
-            unsigned long long deltaDown = 0;
-            unsigned long long deltaUp = 0;
-
-            if (totalDown >= m_prevTotalBytesDown)
-            {
-                deltaDown = totalDown - m_prevTotalBytesDown;
-            }
-            // else: counters decreased -> treat as reset, don't accumulate
-
-            if (totalUp >= m_prevTotalBytesUp)
-            {
-                deltaUp = totalUp - m_prevTotalBytesUp;
-            }
-            // else: counters decreased -> treat as reset
-
-            if (deltaDown > 0 || deltaUp > 0)
-            {
-                std::wstring ifaceName = stats.interfaceName;
-                if (ifaceName.empty())
-                {
-                    ifaceName = LoadStringResource(IDS_ALL_INTERFACES);
-                    if (ifaceName.empty())
-                    {
-                        ifaceName = L"All Interfaces";
-                    }
-                }
-
-                HistoryLogger::Instance().AppendSample(
-                    ifaceName,
-                    deltaDown,
-                    deltaUp
-                );
-            }
-
-            m_prevTotalBytesDown = totalDown;
-            m_prevTotalBytesUp = totalUp;
-        }
+        m_prevTotalBytesDown = totalDown;
+        m_prevTotalBytesUp = totalUp;
+        m_prevTotalsValid = true;
+        return;
     }
 
-    // Update tray icon
+    unsigned long long deltaDown = 0;
+    unsigned long long deltaUp = 0;
+
+    if (totalDown >= m_prevTotalBytesDown)
+    {
+        deltaDown = totalDown - m_prevTotalBytesDown;
+    }
+    // else: counters decreased -> treat as reset, don't accumulate
+
+    if (totalUp >= m_prevTotalBytesUp)
+    {
+        deltaUp = totalUp - m_prevTotalBytesUp;
+    }
+    // else: counters decreased -> treat as reset
+
+    if (deltaDown > 0 || deltaUp > 0)
+    {
+        std::wstring ifaceName = stats.interfaceName;
+        if (ifaceName.empty())
+        {
+            ifaceName = LoadStringResource(IDS_ALL_INTERFACES);
+            if (ifaceName.empty())
+            {
+                ifaceName = L"All Interfaces";
+            }
+        }
+
+        HistoryLogger::Instance().AppendSample(
+            ifaceName,
+            deltaDown,
+            deltaUp
+        );
+    }
+
+    m_prevTotalBytesDown = totalDown;
+    m_prevTotalBytesUp = totalUp;
+}
+
+void Application::UpdateTrayIcon(const NetworkStats& stats)
+{
     if (m_pTrayIcon)
     {
         m_pTrayIcon->UpdateTooltip(stats, m_config.displayUnit);
         m_pTrayIcon->UpdateIcon(stats.currentDownloadSpeed, stats.currentUploadSpeed);
     }
+}
 
-    // Update taskbar overlay
+void Application::UpdateTaskbarOverlay(const NetworkStats& stats)
+{
     if (m_pTaskbarOverlay && m_pTaskbarOverlay->IsVisible())
     {
         m_pTaskbarOverlay->UpdateSpeed(

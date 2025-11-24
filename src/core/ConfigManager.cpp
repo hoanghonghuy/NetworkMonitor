@@ -6,6 +6,7 @@
 
 #include "NetworkMonitor/ConfigManager.h"
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/ThemeHelper.h"
 
 namespace NetworkMonitor
 {
@@ -25,6 +26,10 @@ bool ConfigManager::LoadConfig(AppConfig& config)
     {
         // Use default config if cannot open registry
         config = AppConfig();
+        // Override default dark theme based on system preference
+        bool systemDark = ThemeHelper::IsSystemInDarkMode();
+        config.darkTheme = systemDark;
+        config.themeMode = ThemeMode::SystemDefault;
         return true;
     }
 
@@ -35,7 +40,37 @@ bool ConfigManager::LoadConfig(AppConfig& config)
     config.showDownloadSpeed = ReadDWORD(hKey, L"ShowDownloadSpeed", 1) != 0;
     config.enableLogging = ReadDWORD(hKey, L"EnableLogging", 1) != 0;
     config.debugLogging = ReadDWORD(hKey, L"DebugLogging", 0) != 0;
-    config.darkTheme = ReadDWORD(hKey, L"DarkTheme", 0) != 0;
+    
+    // Default to system theme if not found in registry
+    bool defaultDark = ThemeHelper::IsSystemInDarkMode();
+    config.darkTheme = ReadDWORD(hKey, L"DarkTheme", defaultDark ? 1 : 0) != 0;
+
+    // Load theme mode if present; otherwise infer from legacy DarkTheme
+    DWORD rawThemeMode = ReadDWORD(hKey, L"ThemeMode", static_cast<DWORD>(ThemeMode::SystemDefault));
+    if (rawThemeMode > static_cast<DWORD>(ThemeMode::Dark))
+    {
+        // Registry does not contain a valid ThemeMode value yet.
+        // Infer mode from legacy DarkTheme and current system theme so
+        // that existing configurations migrate smoothly.
+        bool systemDark = ThemeHelper::IsSystemInDarkMode();
+        if (config.darkTheme == systemDark)
+        {
+            config.themeMode = ThemeMode::SystemDefault;
+        }
+        else
+        {
+            config.themeMode = config.darkTheme ? ThemeMode::Dark : ThemeMode::Light;
+        }
+    }
+    else
+    {
+        config.themeMode = static_cast<ThemeMode>(rawThemeMode);
+    }
+
+    // Keep legacy darkTheme flag synchronized with the effective theme so
+    // existing code paths that still read darkTheme behave consistently with
+    // the selected ThemeMode.
+    config.darkTheme = IsDarkThemeEnabled(config);
     config.historyAutoTrimDays = static_cast<int>(ReadDWORD(hKey, L"HistoryAutoTrimDays", DEFAULT_HISTORY_AUTO_TRIM_DAYS));
     if (config.historyAutoTrimDays > MAX_HISTORY_AUTO_TRIM_DAYS)
     {
@@ -71,6 +106,26 @@ bool ConfigManager::SaveConfig(const AppConfig& config)
     success &= WriteDWORD(hKey, L"EnableLogging", config.enableLogging ? 1 : 0);
     success &= WriteDWORD(hKey, L"DebugLogging", config.debugLogging ? 1 : 0);
     success &= WriteDWORD(hKey, L"DarkTheme", config.darkTheme ? 1 : 0);
+
+    // If ThemeMode was never explicitly set (still SystemDefault), derive
+    // a stable value from DarkTheme vs current system theme so that a
+    // simple toggle of DarkTheme round-trips correctly through the
+    // registry and tests observing darkTheme continue to pass.
+    ThemeMode modeToSave = config.themeMode;
+    if (modeToSave == ThemeMode::SystemDefault)
+    {
+        bool systemDark = ThemeHelper::IsSystemInDarkMode();
+        if (config.darkTheme == systemDark)
+        {
+            modeToSave = ThemeMode::SystemDefault;
+        }
+        else
+        {
+            modeToSave = config.darkTheme ? ThemeMode::Dark : ThemeMode::Light;
+        }
+    }
+
+    success &= WriteDWORD(hKey, L"ThemeMode", static_cast<DWORD>(modeToSave));
     int trimDays = config.historyAutoTrimDays;
     if (trimDays < 0)
     {

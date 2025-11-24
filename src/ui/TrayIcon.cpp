@@ -6,6 +6,7 @@
 
 #include "NetworkMonitor/TrayIcon.h"
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/ThemeHelper.h"
 #include "../../resources/resource.h"
 
 namespace NetworkMonitor
@@ -17,6 +18,9 @@ TrayIcon::TrayIcon()
     , m_iconIdle(nullptr)
     , m_iconActive(nullptr)
     , m_iconHigh(nullptr)
+    , m_iconIdleDark(nullptr)
+    , m_iconActiveDark(nullptr)
+    , m_iconHighDark(nullptr)
     , m_configRef(nullptr)
     , m_overlayVisibleProvider(nullptr)
 {
@@ -69,6 +73,43 @@ bool TrayIcon::Initialize(HWND hwnd)
         m_iconHigh = m_iconIdle;
     }
 
+    // Optional dark-theme icons (fallback to normal icons if not present)
+    m_iconIdleDark = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_IDLE_DARK),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+    if (!m_iconIdleDark)
+    {
+        m_iconIdleDark = m_iconIdle;
+    }
+
+    m_iconActiveDark = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_ACTIVE_DARK),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+    if (!m_iconActiveDark)
+    {
+        m_iconActiveDark = m_iconActive;
+    }
+
+    m_iconHighDark = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_HIGH_DARK),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+    if (!m_iconHighDark)
+    {
+        m_iconHighDark = m_iconHigh;
+    }
+
     if (m_iconIdle == nullptr)
     {
         ShowErrorMessage(LoadStringResource(IDS_ERR_LOAD_APP_ICON));
@@ -81,7 +122,18 @@ bool TrayIcon::Initialize(HWND hwnd)
     m_notifyIconData.uID = ID_TRAY_ICON;
     m_notifyIconData.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     m_notifyIconData.uCallbackMessage = WM_TRAYICON;
-    m_notifyIconData.hIcon = m_iconIdle;
+
+    bool useDark = false;
+    if (m_configRef)
+    {
+        useDark = m_configRef->darkTheme;
+    }
+    else
+    {
+        useDark = ThemeHelper::IsSystemInDarkMode();
+    }
+
+    m_notifyIconData.hIcon = useDark ? m_iconIdleDark : m_iconIdle;
     wcscpy_s(m_notifyIconData.szTip, APP_NAME);
 
     // Add tray icon
@@ -236,6 +288,12 @@ void TrayIcon::ShowContextMenu()
     {
         configPtr = &tempConfig;
     }
+
+    // Ensure the process-level dark mode preference matches the current
+    // system app theme so that the tray context menu follows Windows
+    // dark/light instead of the app-specific theme setting.
+    bool systemDarkForMenu = ThemeHelper::IsSystemInDarkMode();
+    ThemeHelper::AllowDarkModeForApp(systemDarkForMenu);
 
     bool overlayVisible = false;
     if (m_overlayVisibleProvider)

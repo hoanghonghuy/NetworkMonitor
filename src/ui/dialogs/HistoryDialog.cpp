@@ -7,6 +7,7 @@
 #include "NetworkMonitor/HistoryDialog.h"
 #include "NetworkMonitor/HistoryLogger.h"
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/ThemeHelper.h"
 #include "../../../resources/resource.h"
 #include <windowsx.h>
 #include <commctrl.h>
@@ -79,10 +80,45 @@ INT_PTR CALLBACK HistoryDialog::InstanceDialogProc(HWND hDlg, UINT message, WPAR
                 SetWindowTextW(hDlg, title.c_str());
             }
 
+            // Apply dark title bar if enabled
+            if (m_pConfig)
+            {
+                ThemeHelper::ApplyDarkTitleBar(hDlg, m_pConfig->darkTheme);
+            }
+
             std::wstring opsLabel = LoadStringResource(IDS_HISTORY_LABEL_OPERATIONS);
             if (!opsLabel.empty())
             {
                 SetDlgItemTextW(hDlg, IDC_HISTORY_LABEL_OPERATIONS, opsLabel.c_str());
+            }
+
+            // In dark theme, make buttons owner-drawn so we can paint dark
+            // backgrounds.
+            if (m_pConfig && m_pConfig->darkTheme)
+            {
+                auto makeOwnerDraw = [](HWND hButton)
+                {
+                    if (!hButton) return;
+                    LONG_PTR style = GetWindowLongPtrW(hButton, GWL_STYLE);
+                    if ((style & BS_OWNERDRAW) == 0)
+                    {
+                        style &= ~BS_TYPEMASK;
+                        style |= BS_OWNERDRAW;
+                        SetWindowLongPtrW(hButton, GWL_STYLE, style);
+
+                        InvalidateRect(hButton, nullptr, TRUE);
+                        UpdateWindow(hButton);
+                    }
+                };
+
+                makeOwnerDraw(GetDlgItem(hDlg, IDC_HISTORY_DELETE_ALL));
+                makeOwnerDraw(GetDlgItem(hDlg, IDC_HISTORY_KEEP_30));
+                makeOwnerDraw(GetDlgItem(hDlg, IDC_HISTORY_KEEP_90));
+                makeOwnerDraw(GetDlgItem(hDlg, IDCANCEL));
+
+                // Clear default button id so the dialog manager does not draw
+                // an initial white default highlight before owner-draw runs.
+                SendMessageW(hDlg, DM_SETDEFID, 0, 0);
             }
 
             std::wstring btnDelete = LoadStringResource(IDS_HISTORY_BUTTON_DELETE_ALL);
@@ -123,6 +159,59 @@ INT_PTR CALLBACK HistoryDialog::InstanceDialogProc(HWND hDlg, UINT message, WPAR
                 SetBkMode(hdc, TRANSPARENT);
 
                 return reinterpret_cast<INT_PTR>(s_darkBrush);
+            }
+            break;
+        }
+        case WM_DRAWITEM:
+        {
+            if (m_pConfig && m_pConfig->darkTheme)
+            {
+                DRAWITEMSTRUCT* pDrawItem = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+                if (pDrawItem->CtlType == ODT_BUTTON)
+                {
+                    UINT id = pDrawItem->CtlID;
+                    if (id == IDC_HISTORY_DELETE_ALL || id == IDC_HISTORY_KEEP_30 ||
+                        id == IDC_HISTORY_KEEP_90 || id == IDCANCEL)
+                    {
+                        HDC hdc = pDrawItem->hDC;
+                        RECT rc = pDrawItem->rcItem;
+
+                        bool pressed = (pDrawItem->itemState & ODS_SELECTED) != 0;
+                        bool focused = (pDrawItem->itemState & ODS_FOCUS) != 0;
+                        bool disabled = (pDrawItem->itemState & ODS_DISABLED) != 0;
+
+                        COLORREF backColor = pressed ? RGB(50, 50, 50) : RGB(40, 40, 40);
+                        COLORREF borderColor = RGB(90, 90, 90);
+                        COLORREF textColor = disabled ? RGB(160, 160, 160) : RGB(230, 230, 230);
+
+                        HBRUSH hBrush = CreateSolidBrush(backColor);
+                        FillRect(hdc, &rc, hBrush);
+                        DeleteObject(hBrush);
+
+                        HBRUSH hBorder = CreateSolidBrush(borderColor);
+                        FrameRect(hdc, &rc, hBorder);
+                        DeleteObject(hBorder);
+
+                        wchar_t text[128] = {0};
+                        GetWindowTextW(pDrawItem->hwndItem, text, static_cast<int>(std::size(text)));
+
+                        SetBkMode(hdc, TRANSPARENT);
+                        SetTextColor(hdc, textColor);
+
+                        RECT textRc = rc;
+                        InflateRect(&textRc, -4, -2);
+                        DrawTextW(hdc, text, -1, &textRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+                        if (focused)
+                        {
+                            RECT focusRc = rc;
+                            InflateRect(&focusRc, -3, -3);
+                            DrawFocusRect(hdc, &focusRc);
+                        }
+
+                        return TRUE;
+                    }
+                }
             }
             break;
         }
@@ -177,7 +266,8 @@ INT_PTR CALLBACK HistoryDialog::InstanceDialogProc(HWND hDlg, UINT message, WPAR
                         title = L"Manage History";
                     }
 
-                    int res = MessageBoxW(hDlg, confirmText.c_str(), title.c_str(), MB_YESNO | MB_ICONQUESTION);
+                    bool dark = (m_pConfig && m_pConfig->darkTheme);
+                    int res = ShowDarkMessageBox(hDlg, confirmText, title, MB_YESNO | MB_ICONQUESTION, dark);
                     if (res != IDYES)
                     {
                         return TRUE;
@@ -201,7 +291,7 @@ INT_PTR CALLBACK HistoryDialog::InstanceDialogProc(HWND hDlg, UINT message, WPAR
                         {
                             err = L"Failed to modify history database.";
                         }
-                        MessageBoxW(hDlg, err.c_str(), title.c_str(), MB_OK | MB_ICONERROR);
+                        ShowDarkMessageBox(hDlg, err, title, MB_OK | MB_ICONERROR, dark);
                     }
 
                     return TRUE;

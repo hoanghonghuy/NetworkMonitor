@@ -361,22 +361,9 @@ bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outS
     bool restrictToday = onlyToday;
     if (restrictToday)
     {
-        std::time_t now = std::time(nullptr);
-        std::tm localTime = {};
-        if (localtime_s(&localTime, &now) != 0)
+        if (!ComputeStartOfToday(startToday))
         {
             restrictToday = false;
-        }
-        else
-        {
-            localTime.tm_hour = 0;
-            localTime.tm_min = 0;
-            localTime.tm_sec = 0;
-            startToday = std::mktime(&localTime);
-            if (startToday == static_cast<std::time_t>(-1))
-            {
-                restrictToday = false;
-            }
         }
     }
 
@@ -445,6 +432,39 @@ bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outS
         LogError(L"HistoryLogger::GetRecentSamples: sqlite3_step ended with rc=" + std::to_wstring(rc));
     }
 
+    LogRecentSamplesDebug(limit, onlyToday, interfaceFilter, outSamples);
+
+    return (rc == SQLITE_DONE);
+}
+
+bool HistoryLogger::ComputeStartOfToday(std::time_t& startOut)
+{
+    std::time_t now = std::time(nullptr);
+    std::tm localTime = {};
+    if (localtime_s(&localTime, &now) != 0)
+    {
+        return false;
+    }
+
+    localTime.tm_hour = 0;
+    localTime.tm_min = 0;
+    localTime.tm_sec = 0;
+
+    std::time_t start = std::mktime(&localTime);
+    if (start == static_cast<std::time_t>(-1))
+    {
+        return false;
+    }
+
+    startOut = start;
+    return true;
+}
+
+void HistoryLogger::LogRecentSamplesDebug(int limit,
+                                          bool onlyToday,
+                                          const std::wstring* interfaceFilter,
+                                          const std::vector<HistorySample>& outSamples)
+{
     if (outSamples.empty())
     {
         std::wstring info = L"HistoryLogger::GetRecentSamples: no samples returned (limit="
@@ -465,8 +485,6 @@ bool HistoryLogger::GetRecentSamples(int limit, std::vector<HistorySample>& outS
             + ((interfaceFilter && !interfaceFilter->empty()) ? *interfaceFilter : L"<none>");
         LogDebug(info);
     }
-
-    return (rc == SQLITE_DONE);
 }
 
 bool HistoryLogger::DeleteAll()

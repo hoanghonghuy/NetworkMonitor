@@ -106,6 +106,14 @@ enum class AppLanguage
     Vietnamese = 2
 };
 
+// Application theme mode
+enum class ThemeMode
+{
+    SystemDefault = 0,
+    Light = 1,
+    Dark = 2
+};
+
 // Network statistics for a single interface
 struct NetworkStats
 {
@@ -148,6 +156,7 @@ struct AppConfig
     bool enableLogging;              // Enable history logging
     bool debugLogging;               // Enable debug logging to file
     bool darkTheme;
+    ThemeMode themeMode;             // Theme selection mode
     int historyAutoTrimDays;
     AppLanguage language;            // UI language
     std::wstring selectedInterface;  // Selected interface name (empty = all)
@@ -161,6 +170,7 @@ struct AppConfig
         , enableLogging(true)
         , debugLogging(false)
         , darkTheme(false)
+        , themeMode(ThemeMode::SystemDefault)
         , historyAutoTrimDays(DEFAULT_HISTORY_AUTO_TRIM_DAYS)
         , language(AppLanguage::SystemDefault)
         , selectedInterface(L"")

@@ -72,6 +72,11 @@ void LogDebug(const std::wstring& message);
 void LogError(const std::wstring& message);
 void SetDebugLoggingEnabled(bool enabled);
 void ShowErrorMessage(const std::wstring& message, const std::wstring& title = L"Error");
+int ShowDarkMessageBox(HWND owner,
+                       const std::wstring& message,
+                       const std::wstring& title,
+                       UINT flags,
+                       bool darkTheme);
 
 // ============================================================================
 // UI UTILITIES
@@ -85,6 +90,8 @@ void CenterWindowOnScreen(HWND hWnd);
 
 // Open the application log file (or its folder) in the default handler
 void OpenLogFileInExplorer();
+
+bool IsDarkThemeEnabled(const AppConfig& config);
 
 } // namespace NetworkMonitor
 

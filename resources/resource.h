@@ -17,6 +17,12 @@
 #define IDI_TRAY_ACTIVE                 103
 #define IDI_TRAY_HIGH                   104
 
+// Optional dark-variant icons (fallback to normal icons if resources not present)
+#define IDI_APP_ICON_DARK               105
+#define IDI_TRAY_IDLE_DARK              106
+#define IDI_TRAY_ACTIVE_DARK            107
+#define IDI_TRAY_HIGH_DARK              108
+
 // ============================================================================
 // MENU RESOURCES
 // ============================================================================
@@ -46,6 +52,7 @@
 #define IDD_SETTINGS_DIALOG             302
 #define IDD_DASHBOARD_DIALOG            303
 #define IDD_HISTORY_MANAGE_DIALOG       304
+#define IDD_MESSAGE_DIALOG              305
 
 // ============================================================================
 // STRING RESOURCES
@@ -117,6 +124,9 @@
 #define IDS_SETTINGS_LABEL_DEBUGLOGGING  474
 #define IDS_SETTINGS_BUTTON_OPEN_LOG    475
 #define IDS_SETTINGS_LABEL_DARK_THEME   477
+#define IDS_SETTINGS_THEME_SYSTEM        478
+#define IDS_SETTINGS_THEME_LIGHT         479
+#define IDS_SETTINGS_THEME_DARK          480
 #define IDS_DASHBOARD_TITLE             464
 #define IDS_DASHBOARD_LABEL_TODAY       465
 #define IDS_DASHBOARD_LABEL_THIS_MONTH  466
@@ -173,6 +183,10 @@
 #define IDC_SETTINGS_BUTTON_OPEN_LOG    537
 #define IDC_DASHBOARD_BUTTON_EXPORT     538
 #define IDC_DARK_THEME_CHECK            539
+#define IDC_MESSAGE_ICON                540
+#define IDC_MESSAGE_TEXT                541
+#define IDC_SETTINGS_LABEL_THEME        542
+#define IDC_THEME_MODE_COMBO            543
 
 // ============================================================================
 // STANDARD DIALOG IDS

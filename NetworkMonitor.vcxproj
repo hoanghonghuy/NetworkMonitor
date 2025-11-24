@@ -208,6 +208,7 @@
     <ClCompile Include="src\core\ConfigManager.cpp" />
     <ClCompile Include="src\ui\TrayIcon.cpp" />
     <ClCompile Include="src\ui\TaskbarOverlay.cpp" />
+    <ClCompile Include="src\ui\ThemeHelper.cpp" />
     <ClCompile Include="src\core\HistoryLogger.cpp" />
     <ClCompile Include="third_party\sqlite\sqlite3.c" />
   </ItemGroup>
@@ -226,6 +227,7 @@
     <ClInclude Include="include\NetworkMonitor\ConfigManager.h" />
     <ClInclude Include="include\NetworkMonitor\TrayIcon.h" />
     <ClInclude Include="include\NetworkMonitor\TaskbarOverlay.h" />
+    <ClInclude Include="include\NetworkMonitor\ThemeHelper.h" />
     <ClInclude Include="include\NetworkMonitor\HistoryLogger.h" />
     <ClInclude Include="resources\resource.h" />
   </ItemGroup>
