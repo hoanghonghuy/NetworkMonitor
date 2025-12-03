@@ -8,6 +8,9 @@
 #define NETWORK_MONITOR_THEMEHELPER_H
 
 #include <windows.h>
+#include <dwmapi.h>
+
+#pragma comment(lib, "dwmapi.lib")
 
 namespace NetworkMonitor
 {

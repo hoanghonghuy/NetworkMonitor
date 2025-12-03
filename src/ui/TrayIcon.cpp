@@ -160,7 +160,7 @@ void TrayIcon::Cleanup()
         m_initialized = false;
     }
 
-    // Cleanup icons
+    // Cleanup light theme icons
     if (m_iconIdle)
     {
         DestroyIcon(m_iconIdle);
@@ -175,6 +175,23 @@ void TrayIcon::Cleanup()
     {
         DestroyIcon(m_iconHigh);
         m_iconHigh = nullptr;
+    }
+
+    // Cleanup dark theme icons (only if they are distinct from light icons)
+    if (m_iconIdleDark && m_iconIdleDark != m_iconIdle)
+    {
+        DestroyIcon(m_iconIdleDark);
+        m_iconIdleDark = nullptr;
+    }
+    if (m_iconActiveDark && m_iconActiveDark != m_iconActive && m_iconActiveDark != m_iconIdle)
+    {
+        DestroyIcon(m_iconActiveDark);
+        m_iconActiveDark = nullptr;
+    }
+    if (m_iconHighDark && m_iconHighDark != m_iconHigh && m_iconHighDark != m_iconIdle)
+    {
+        DestroyIcon(m_iconHighDark);
+        m_iconHighDark = nullptr;
     }
 }
 
@@ -208,20 +225,31 @@ void TrayIcon::UpdateIcon(double downloadSpeed, double uploadSpeed)
         return;
     }
 
+    // Determine if we should use dark theme icons
+    bool useDark = false;
+    if (m_configRef)
+    {
+        useDark = m_configRef->darkTheme;
+    }
+    else
+    {
+        useDark = ThemeHelper::IsSystemInDarkMode();
+    }
+
     // Determine which icon to use based on traffic
     const double HIGH_THRESHOLD = 1024.0 * 1024.0;  // 1 MB/s
     const double ACTIVE_THRESHOLD = 10.0 * 1024.0;  // 10 KB/s
 
-    HICON newIcon = m_iconIdle;
+    HICON newIcon = useDark ? m_iconIdleDark : m_iconIdle;
     double totalSpeed = downloadSpeed + uploadSpeed;
 
     if (totalSpeed > HIGH_THRESHOLD)
     {
-        newIcon = m_iconHigh;
+        newIcon = useDark ? m_iconHighDark : m_iconHigh;
     }
     else if (totalSpeed > ACTIVE_THRESHOLD)
     {
-        newIcon = m_iconActive;
+        newIcon = useDark ? m_iconActiveDark : m_iconActive;
     }
 
     // Update icon if changed
