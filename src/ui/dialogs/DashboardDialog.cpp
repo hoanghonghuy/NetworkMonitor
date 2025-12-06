@@ -139,6 +139,25 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
                 SetDlgItemTextW(hDlg, IDC_DASHBOARD_LABEL_UPLOAD_M, ulLabel.c_str());
             }
 
+            // Localize button labels
+            std::wstring manageText = LoadStringResource(IDS_DASHBOARD_BUTTON_MANAGE);
+            if (!manageText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_HISTORY_MANAGE, manageText.c_str());
+            }
+
+            std::wstring refreshText = LoadStringResource(IDS_DASHBOARD_BUTTON_REFRESH);
+            if (!refreshText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_DASHBOARD_REFRESH, refreshText.c_str());
+            }
+
+            std::wstring closeText = LoadStringResource(IDS_DASHBOARD_BUTTON_CLOSE);
+            if (!closeText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDOK, closeText.c_str());
+            }
+
             // Initialize list columns once
             HWND hList = GetDlgItem(hDlg, IDC_RECENT_LIST);
             if (hList)

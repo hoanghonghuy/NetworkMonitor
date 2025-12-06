@@ -110,6 +110,9 @@
 #define IDS_LANGUAGE_SYSTEM             450
 #define IDS_LANGUAGE_ENGLISH            451
 #define IDS_LANGUAGE_VIETNAMESE         452
+#define IDS_LANGUAGE_JAPANESE           486
+#define IDS_LANGUAGE_KOREAN             487
+#define IDS_LANGUAGE_CHINESE_SIMPLIFIED 488
 #define IDS_SETTINGS_TITLE              453
 #define IDS_SETTINGS_GROUP_GENERAL      454
 #define IDS_SETTINGS_GROUP_UPDATE       455
@@ -143,6 +146,19 @@
 #define IDS_NOTIFICATION_CONNECTED_TITLE    483
 #define IDS_NOTIFICATION_CONNECTED_MSG      484
 #define IDS_SETTINGS_LABEL_CONNECTION_NOTIFY 485
+
+// Tab names
+#define IDS_SETTINGS_TAB_GENERAL        489
+#define IDS_SETTINGS_TAB_DISPLAY        490
+#define IDS_SETTINGS_TAB_ADVANCED       491
+
+// Button labels
+#define IDS_BUTTON_OK                   492
+#define IDS_BUTTON_CANCEL               493
+#define IDS_BUTTON_APPLY                494
+#define IDS_DASHBOARD_BUTTON_REFRESH    495
+#define IDS_DASHBOARD_BUTTON_CLOSE      496
+#define IDS_DASHBOARD_BUTTON_MANAGE     497
 
 // ============================================================================
 // CONTROL IDS (for dialogs)

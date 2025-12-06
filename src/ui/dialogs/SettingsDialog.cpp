@@ -188,6 +188,12 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 SetDlgItemTextW(hDlg, IDC_DEBUG_LOGGING_CHECK, debugLogText.c_str());
             }
 
+            std::wstring connectionNotifyText = LoadStringResource(IDS_SETTINGS_LABEL_CONNECTION_NOTIFY);
+            if (!connectionNotifyText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_CONNECTION_NOTIFY_CHECK, connectionNotifyText.c_str());
+            }
+
             std::wstring darkThemeText = LoadStringResource(IDS_SETTINGS_LABEL_DARK_THEME);
             if (!darkThemeText.empty())
             {
@@ -210,6 +216,25 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
             if (!openLogText.empty())
             {
                 SetDlgItemTextW(hDlg, IDC_SETTINGS_BUTTON_OPEN_LOG, openLogText.c_str());
+            }
+
+            // Localize button labels
+            std::wstring okText = LoadStringResource(IDS_BUTTON_OK);
+            if (!okText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDOK, okText.c_str());
+            }
+
+            std::wstring cancelText = LoadStringResource(IDS_BUTTON_CANCEL);
+            if (!cancelText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDCANCEL, cancelText.c_str());
+            }
+
+            std::wstring applyText = LoadStringResource(IDS_BUTTON_APPLY);
+            if (!applyText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_SETTINGS_BUTTON_APPLY, applyText.c_str());
             }
 
             // Populate dialog controls
@@ -517,9 +542,12 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
         };
 
         const LanguageOption langs[] = {
-            {AppLanguage::SystemDefault, IDS_LANGUAGE_SYSTEM},
-            {AppLanguage::English,       IDS_LANGUAGE_ENGLISH},
-            {AppLanguage::Vietnamese,    IDS_LANGUAGE_VIETNAMESE},
+            {AppLanguage::SystemDefault,     IDS_LANGUAGE_SYSTEM},
+            {AppLanguage::English,           IDS_LANGUAGE_ENGLISH},
+            {AppLanguage::Vietnamese,        IDS_LANGUAGE_VIETNAMESE},
+            {AppLanguage::Japanese,          IDS_LANGUAGE_JAPANESE},
+            {AppLanguage::Korean,            IDS_LANGUAGE_KOREAN},
+            {AppLanguage::ChineseSimplified, IDS_LANGUAGE_CHINESE_SIMPLIFIED},
         };
 
         int selectedIndex = -1;
@@ -539,6 +567,15 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
                 case AppLanguage::Vietnamese:
                     label = L"Tiếng Việt";
                     break;
+                case AppLanguage::Japanese:
+                    label = L"日本語";
+                    break;
+                case AppLanguage::Korean:
+                    label = L"한국어";
+                    break;
+                case AppLanguage::ChineseSimplified:
+                    label = L"简体中文";
+                    break;
                 default:
                     label = L"Unknown";
                     break;
@@ -546,7 +583,7 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
             }
 
             int index = static_cast<int>(SendMessageW(hLanguage, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str())));
-            SendMessageW(hLanguage, CB_SETITEMDATA, index, static_cast<WPARAM>(option.language));
+            SendMessageW(hLanguage, CB_SETITEMDATA, index, static_cast<LPARAM>(static_cast<int>(option.language)));
 
             if (m_configCopy.language == option.language)
             {
@@ -1207,13 +1244,19 @@ void SettingsDialog::InitializeTabControl(HWND hDlg)
     TCITEM tie = {};
     tie.mask = TCIF_TEXT;
 
-    tie.pszText = const_cast<LPWSTR>(L"General");
+    std::wstring tabGeneral = LoadStringResource(IDS_SETTINGS_TAB_GENERAL);
+    if (tabGeneral.empty()) tabGeneral = L"General";
+    tie.pszText = const_cast<LPWSTR>(tabGeneral.c_str());
     TabCtrl_InsertItem(hTab, 0, &tie);
 
-    tie.pszText = const_cast<LPWSTR>(L"Display");
+    std::wstring tabDisplay = LoadStringResource(IDS_SETTINGS_TAB_DISPLAY);
+    if (tabDisplay.empty()) tabDisplay = L"Display";
+    tie.pszText = const_cast<LPWSTR>(tabDisplay.c_str());
     TabCtrl_InsertItem(hTab, 1, &tie);
 
-    tie.pszText = const_cast<LPWSTR>(L"Advanced");
+    std::wstring tabAdvanced = LoadStringResource(IDS_SETTINGS_TAB_ADVANCED);
+    if (tabAdvanced.empty()) tabAdvanced = L"Advanced";
+    tie.pszText = const_cast<LPWSTR>(tabAdvanced.c_str());
     TabCtrl_InsertItem(hTab, 2, &tie);
 }
 

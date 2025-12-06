@@ -107,7 +107,10 @@ enum class AppLanguage
 {
     SystemDefault = 0,
     English = 1,
-    Vietnamese = 2
+    Vietnamese = 2,
+    Japanese = 3,
+    Korean = 4,
+    ChineseSimplified = 5
 };
 
 // Application theme mode

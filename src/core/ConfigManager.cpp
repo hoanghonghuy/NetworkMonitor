@@ -77,7 +77,7 @@ bool ConfigManager::LoadConfig(AppConfig& config)
         config.historyAutoTrimDays = MAX_HISTORY_AUTO_TRIM_DAYS;
     }
     DWORD langValue = ReadDWORD(hKey, L"Language", static_cast<DWORD>(AppLanguage::SystemDefault));
-    if (langValue > static_cast<DWORD>(AppLanguage::Vietnamese))
+    if (langValue > static_cast<DWORD>(AppLanguage::ChineseSimplified))
     {
         langValue = static_cast<DWORD>(AppLanguage::SystemDefault);
     }

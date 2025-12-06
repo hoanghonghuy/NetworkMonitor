@@ -277,6 +277,18 @@ void Application::ApplyLanguageFromConfig()
         langId = MAKELANGID(LANG_VIETNAMESE, SUBLANG_VIETNAMESE_VIETNAM);
         break;
 
+    case AppLanguage::Japanese:
+        langId = MAKELANGID(LANG_JAPANESE, SUBLANG_JAPANESE_JAPAN);
+        break;
+
+    case AppLanguage::Korean:
+        langId = MAKELANGID(LANG_KOREAN, SUBLANG_KOREAN);
+        break;
+
+    case AppLanguage::ChineseSimplified:
+        langId = MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
+        break;
+
     case AppLanguage::SystemDefault:
     default:
         langId = GetUserDefaultUILanguage();

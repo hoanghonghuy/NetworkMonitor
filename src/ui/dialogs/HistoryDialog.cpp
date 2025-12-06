@@ -93,6 +93,31 @@ INT_PTR CALLBACK HistoryDialog::InstanceDialogProc(HWND hDlg, UINT message, WPAR
                 SetDlgItemTextW(hDlg, IDC_HISTORY_LABEL_OPERATIONS, opsLabel.c_str());
             }
 
+            // Localize button labels
+            std::wstring deleteAllText = LoadStringResource(IDS_HISTORY_BUTTON_DELETE_ALL);
+            if (!deleteAllText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_HISTORY_DELETE_ALL, deleteAllText.c_str());
+            }
+
+            std::wstring keep30Text = LoadStringResource(IDS_HISTORY_BUTTON_KEEP_30);
+            if (!keep30Text.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_HISTORY_KEEP_30, keep30Text.c_str());
+            }
+
+            std::wstring keep90Text = LoadStringResource(IDS_HISTORY_BUTTON_KEEP_90);
+            if (!keep90Text.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_HISTORY_KEEP_90, keep90Text.c_str());
+            }
+
+            std::wstring closeText = LoadStringResource(IDS_BUTTON_CANCEL);
+            if (!closeText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDCANCEL, closeText.c_str());
+            }
+
             // In dark theme, make buttons owner-drawn so we can paint dark
             // backgrounds.
             if (m_pConfig && m_pConfig->darkTheme)
