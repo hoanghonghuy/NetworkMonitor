@@ -85,6 +85,10 @@ bool ConfigManager::LoadConfig(AppConfig& config)
     config.selectedInterface = ReadString(hKey, L"SelectedInterface", L"");
     config.autoStart = IsAutoStartEnabled();
     config.enableConnectionNotification = ReadDWORD(hKey, L"EnableConnectionNotify", 1) != 0;
+    config.pingTarget = ReadString(hKey, L"PingTarget", L"8.8.8.8");
+    config.pingIntervalMs = ReadDWORD(hKey, L"PingIntervalMs", 5000);
+    config.hotkeyModifier = ReadDWORD(hKey, L"HotkeyModifier", MOD_WIN | MOD_SHIFT);
+    config.hotkeyKey = ReadDWORD(hKey, L"HotkeyKey", 'N');
 
     RegCloseKey(hKey);
     return true;
@@ -140,6 +144,10 @@ bool ConfigManager::SaveConfig(const AppConfig& config)
     success &= WriteDWORD(hKey, L"Language", static_cast<DWORD>(config.language));
     success &= WriteString(hKey, L"SelectedInterface", config.selectedInterface);
     success &= WriteDWORD(hKey, L"EnableConnectionNotify", config.enableConnectionNotification ? 1 : 0);
+    success &= WriteString(hKey, L"PingTarget", config.pingTarget);
+    success &= WriteDWORD(hKey, L"PingIntervalMs", config.pingIntervalMs);
+    success &= WriteDWORD(hKey, L"HotkeyModifier", config.hotkeyModifier);
+    success &= WriteDWORD(hKey, L"HotkeyKey", config.hotkeyKey);
 
     // Save auto-start setting
     success &= SetAutoStart(config.autoStart);

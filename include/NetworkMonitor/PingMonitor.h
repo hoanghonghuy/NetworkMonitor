@@ -11,6 +11,7 @@
 #include <winsock2.h>
 #include <iphlpapi.h>
 #include <icmpapi.h>
+#include <string>
 
 #pragma comment(lib, "iphlpapi.lib")
 
@@ -23,7 +24,8 @@ public:
     PingMonitor();
     ~PingMonitor();
 
-    bool Initialize();
+    // Initialize with target IP/domain (default: 8.8.8.8)
+    bool Initialize(const std::wstring& target = L"8.8.8.8");
     void Cleanup();
 
     // Perform ping and update latency (call from timer)
@@ -35,16 +37,23 @@ public:
     // Check if ping is available
     bool IsAvailable() const { return m_initialized; }
 
+    // Set new target (will resolve on next Update)
+    void SetTarget(const std::wstring& target);
+
 private:
     HANDLE m_hIcmp;
     bool m_initialized;
     int m_latency;  // -1 = unavailable/timeout
+    std::wstring m_target;
+    ULONG m_targetIP;
 
-    // Target IP (Google DNS)
-    static constexpr ULONG TARGET_IP = 0x08080808;  // 8.8.8.8 in network byte order
+    // Resolve hostname/IP to IP address
+    bool ResolveTarget();
+
     static constexpr DWORD TIMEOUT_MS = 1000;
 };
 
 } // namespace NetworkMonitor
 
 #endif // NETWORK_MONITOR_PING_MONITOR_H
+

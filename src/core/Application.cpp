@@ -137,7 +137,7 @@ bool Application::Initialize(HINSTANCE hInstance)
 
     // Create and initialize ping monitor
     m_pPingMonitor = std::make_unique<PingMonitor>();
-    if (!m_pPingMonitor->Initialize())
+    if (!m_pPingMonitor->Initialize(m_config.pingTarget))
     {
         LogDebug(L"Application::Initialize: PingMonitor init failed, continuing without ping");
         m_pPingMonitor.reset();
@@ -146,10 +146,10 @@ bool Application::Initialize(HINSTANCE hInstance)
     // Start timer for network monitoring updates
     SetTimer(m_hwnd, TIMER_UPDATE_NETWORK, m_config.updateInterval, nullptr);
 
-    // Start timer for ping (every 5 seconds)
+    // Start timer for ping (use configured interval)
     if (m_pPingMonitor)
     {
-        SetTimer(m_hwnd, TIMER_PING, 5000, nullptr);
+        SetTimer(m_hwnd, TIMER_PING, m_config.pingIntervalMs, nullptr);
     }
 
     // Register hotkeys
@@ -717,14 +717,15 @@ void Application::RegisterHotkeys()
         return;
     }
 
-    // Win+Shift+N to toggle overlay
-    if (!RegisterHotKey(m_hwnd, HOTKEY_TOGGLE_OVERLAY, MOD_WIN | MOD_SHIFT | MOD_NOREPEAT, 'N'))
+    // Register configurable hotkey to toggle overlay
+    UINT modifiers = m_config.hotkeyModifier | MOD_NOREPEAT;
+    if (!RegisterHotKey(m_hwnd, HOTKEY_TOGGLE_OVERLAY, modifiers, m_config.hotkeyKey))
     {
-        LogDebug(L"Application::RegisterHotkeys: Failed to register Win+Shift+N");
+        LogDebug(L"Application::RegisterHotkeys: Failed to register hotkey");
     }
     else
     {
-        LogDebug(L"Application::RegisterHotkeys: Registered Win+Shift+N");
+        LogDebug(L"Application::RegisterHotkeys: Registered hotkey");
     }
 }
 

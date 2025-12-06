@@ -165,6 +165,10 @@ struct AppConfig
     AppLanguage language;            // UI language
     std::wstring selectedInterface;  // Selected interface name (empty = all)
     bool enableConnectionNotification; // Show notification on connect/disconnect
+    std::wstring pingTarget;         // Ping target IP/domain (default: 8.8.8.8)
+    UINT pingIntervalMs;             // Ping interval in milliseconds (default: 5000)
+    UINT hotkeyModifier;             // Hotkey modifier (MOD_WIN | MOD_SHIFT, etc.)
+    UINT hotkeyKey;                  // Hotkey virtual key code (default: 'N')
 
     AppConfig()
         : updateInterval(DEFAULT_UPDATE_INTERVAL)
@@ -180,6 +184,10 @@ struct AppConfig
         , language(AppLanguage::SystemDefault)
         , selectedInterface(L"")
         , enableConnectionNotification(true)
+        , pingTarget(L"8.8.8.8")
+        , pingIntervalMs(5000)
+        , hotkeyModifier(MOD_WIN | MOD_SHIFT)
+        , hotkeyKey('N')
     {
     }
 };

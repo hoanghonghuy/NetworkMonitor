@@ -193,6 +193,10 @@
 #define IDC_SETTINGS_LABEL_THEME        542
 #define IDC_THEME_MODE_COMBO            543
 #define IDC_CONNECTION_NOTIFY_CHECK     544
+#define IDC_SETTINGS_GROUP_ADVANCED     545
+#define IDC_PING_TARGET_EDIT            546
+#define IDC_PING_INTERVAL_COMBO         547
+#define IDC_HOTKEY_COMBO                548
 
 // ============================================================================
 // STANDARD DIALOG IDS

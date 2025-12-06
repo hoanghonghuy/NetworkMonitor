@@ -633,6 +633,79 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
         }
     }
 
+    // Populate ping target edit
+    HWND hPingTarget = GetDlgItem(hDlg, IDC_PING_TARGET_EDIT);
+    if (hPingTarget)
+    {
+        SetWindowTextW(hPingTarget, m_configCopy.pingTarget.c_str());
+    }
+
+    // Populate ping interval combo
+    HWND hPingInterval = GetDlgItem(hDlg, IDC_PING_INTERVAL_COMBO);
+    if (hPingInterval)
+    {
+        struct IntervalOption { UINT ms; const wchar_t* label; };
+        const IntervalOption intervals[] = {
+            {3000,  L"3s"},
+            {5000,  L"5s"},
+            {10000, L"10s"},
+            {30000, L"30s"},
+        };
+
+        int selectedIndex = -1;
+        for (const auto& option : intervals)
+        {
+            int index = static_cast<int>(SendMessageW(hPingInterval, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(option.label)));
+            SendMessageW(hPingInterval, CB_SETITEMDATA, index, option.ms);
+            if (m_configCopy.pingIntervalMs == option.ms)
+            {
+                selectedIndex = index;
+            }
+        }
+        if (selectedIndex >= 0)
+        {
+            SendMessageW(hPingInterval, CB_SETCURSEL, selectedIndex, 0);
+        }
+        else
+        {
+            SendMessageW(hPingInterval, CB_SETCURSEL, 1, 0); // Default to 5s
+        }
+    }
+
+    // Populate hotkey combo
+    HWND hHotkey = GetDlgItem(hDlg, IDC_HOTKEY_COMBO);
+    if (hHotkey)
+    {
+        struct HotkeyOption { UINT modifier; UINT key; const wchar_t* label; };
+        const HotkeyOption hotkeys[] = {
+            {MOD_WIN | MOD_SHIFT, 'N', L"Win+Shift+N"},
+            {MOD_WIN | MOD_SHIFT, 'M', L"Win+Shift+M"},
+            {MOD_CONTROL | MOD_SHIFT, 'N', L"Ctrl+Shift+N"},
+            {MOD_CONTROL | MOD_ALT, 'N', L"Ctrl+Alt+N"},
+        };
+
+        int selectedIndex = -1;
+        for (const auto& option : hotkeys)
+        {
+            int index = static_cast<int>(SendMessageW(hHotkey, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(option.label)));
+            // Store both modifier and key in item data (modifier in high word, key in low word)
+            LPARAM data = MAKELPARAM(option.key, option.modifier);
+            SendMessageW(hHotkey, CB_SETITEMDATA, index, data);
+            if (m_configCopy.hotkeyModifier == option.modifier && m_configCopy.hotkeyKey == option.key)
+            {
+                selectedIndex = index;
+            }
+        }
+        if (selectedIndex >= 0)
+        {
+            SendMessageW(hHotkey, CB_SETCURSEL, selectedIndex, 0);
+        }
+        else
+        {
+            SendMessageW(hHotkey, CB_SETCURSEL, 0, 0); // Default to Win+Shift+N
+        }
+    }
+
     // For dark theme, disable visual styles for comboboxes so our
     // WM_CTLCOLOR* handlers can control background/text colors.
     if (m_configCopy.darkTheme)
@@ -643,6 +716,8 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
         HWND hIfaceTheme  = GetDlgItem(hDlg, IDC_INTERFACE_COMBO);
         HWND hTrimTheme   = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
         HWND hThemeModeCB = GetDlgItem(hDlg, IDC_THEME_MODE_COMBO);
+        HWND hPingIntTheme = GetDlgItem(hDlg, IDC_PING_INTERVAL_COMBO);
+        HWND hHotkeyTheme = GetDlgItem(hDlg, IDC_HOTKEY_COMBO);
 
         if (hLangTheme)    SetWindowTheme(hLangTheme,   L"", L"");
         if (hIntTheme)     SetWindowTheme(hIntTheme,    L"", L"");
@@ -650,6 +725,8 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
         if (hIfaceTheme)   SetWindowTheme(hIfaceTheme,  L"", L"");
         if (hTrimTheme)    SetWindowTheme(hTrimTheme,   L"", L"");
         if (hThemeModeCB)  SetWindowTheme(hThemeModeCB, L"", L"");
+        if (hPingIntTheme) SetWindowTheme(hPingIntTheme, L"", L"");
+        if (hHotkeyTheme)  SetWindowTheme(hHotkeyTheme, L"", L"");
     }
 }
 
@@ -762,6 +839,54 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
         }
     }
 
+    // Get ping target
+    std::wstring newPingTarget = m_configCopy.pingTarget;
+    HWND hPingTarget = GetDlgItem(hDlg, IDC_PING_TARGET_EDIT);
+    if (hPingTarget)
+    {
+        wchar_t buffer[256] = {0};
+        GetWindowTextW(hPingTarget, buffer, 256);
+        newPingTarget = buffer;
+        if (newPingTarget.empty())
+        {
+            newPingTarget = L"8.8.8.8";
+        }
+    }
+
+    // Get ping interval
+    UINT newPingInterval = m_configCopy.pingIntervalMs;
+    HWND hPingInterval = GetDlgItem(hDlg, IDC_PING_INTERVAL_COMBO);
+    if (hPingInterval)
+    {
+        int sel = static_cast<int>(SendMessageW(hPingInterval, CB_GETCURSEL, 0, 0));
+        if (sel != CB_ERR)
+        {
+            LRESULT data = SendMessageW(hPingInterval, CB_GETITEMDATA, sel, 0);
+            if (data != CB_ERR)
+            {
+                newPingInterval = static_cast<UINT>(data);
+            }
+        }
+    }
+
+    // Get hotkey
+    UINT newHotkeyModifier = m_configCopy.hotkeyModifier;
+    UINT newHotkeyKey = m_configCopy.hotkeyKey;
+    HWND hHotkeyCombo = GetDlgItem(hDlg, IDC_HOTKEY_COMBO);
+    if (hHotkeyCombo)
+    {
+        int sel = static_cast<int>(SendMessageW(hHotkeyCombo, CB_GETCURSEL, 0, 0));
+        if (sel != CB_ERR)
+        {
+            LRESULT data = SendMessageW(hHotkeyCombo, CB_GETITEMDATA, sel, 0);
+            if (data != CB_ERR)
+            {
+                newHotkeyKey = LOWORD(data);
+                newHotkeyModifier = HIWORD(data);
+            }
+        }
+    }
+
     // Update working copy
     m_configCopy.updateInterval = newInterval;
     m_configCopy.displayUnit = newUnit;
@@ -774,6 +899,10 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     m_configCopy.selectedInterface = newInterface;
     m_configCopy.historyAutoTrimDays = newTrimDays;
     m_configCopy.language = newLanguage;
+    m_configCopy.pingTarget = newPingTarget;
+    m_configCopy.pingIntervalMs = newPingInterval;
+    m_configCopy.hotkeyModifier = newHotkeyModifier;
+    m_configCopy.hotkeyKey = newHotkeyKey;
 
     // Save to registry via ConfigManager (ignore errors for now, like main.cpp)
     if (m_pConfigManager)
