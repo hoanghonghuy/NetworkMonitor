@@ -293,66 +293,77 @@ void Application::ShowSettingsDialog()
         return;
     }
 
-    // Keep a copy of current config to detect changes after dialog
-    AppConfig oldConfig = m_config;
-
-    SettingsDialog dlg;
-    if (!dlg.Show(m_hwnd, m_pConfigManager.get(), m_pNetworkMonitor.get()))
+    // Loop to handle dialog reopen (for theme/language changes)
+    INT_PTR dialogResult;
+    do
     {
-        // User cancelled or dialog failed
-        return;
-    }
+        // Keep a copy of current config to detect changes after dialog
+        AppConfig oldConfig = m_config;
 
-    // Reload config from persistent storage
-    if (!LoadConfig())
-    {
-        // If reload fails, keep old config and exit
-        m_config = oldConfig;
-        return;
-    }
+        SettingsDialog dlg;
 
+        // Set up callback for Apply button - reload and apply settings immediately
+        dlg.SetSettingsChangedCallback([this, &oldConfig]()
+        {
+            // Reload config from registry
+            if (LoadConfig())
+            {
+                SetDebugLoggingEnabled(m_config.debugLogging);
+                ThemeHelper::AllowDarkModeForApp(ThemeHelper::IsSystemInDarkMode());
+
+                if (m_pTrayIcon)
+                {
+                    m_pTrayIcon->SetConfigSource(&m_config);
+                }
+
+                if (m_pTaskbarOverlay)
+                {
+                    m_pTaskbarOverlay->SetDarkTheme(m_config.darkTheme);
+                    m_pTaskbarOverlay->SetOverlayStyle(m_config.overlayFontSize,
+                                                       m_config.overlayDownloadColor,
+                                                       m_config.overlayUploadColor);
+                }
+
+                // Apply timer changes
+                if (m_config.updateInterval != oldConfig.updateInterval)
+                {
+                    KillTimer(m_hwnd, TIMER_UPDATE_NETWORK);
+                    SetTimer(m_hwnd, TIMER_UPDATE_NETWORK, m_config.updateInterval, nullptr);
+                }
+
+                if (m_config.historyAutoTrimDays != oldConfig.historyAutoTrimDays && 
+                    m_config.historyAutoTrimDays > 0)
+                {
+                    HistoryLogger::Instance().TrimToRecentDays(m_config.historyAutoTrimDays);
+                }
+
+                if (m_config.language != oldConfig.language)
+                {
+                    ApplyLanguageFromConfig();
+                }
+
+                // Update oldConfig for next comparison
+                oldConfig = m_config;
+
+                // Refresh UI
+                OnTimer();
+            }
+        });
+
+        dialogResult = dlg.Show(m_hwnd, m_pConfigManager.get(), m_pNetworkMonitor.get());
+
+        if (dialogResult == IDCANCEL)
+        {
+            // User cancelled - exit without further processing
+            return;
+        }
+
+    } while (dialogResult == IDAPPLY_REOPEN);
+
+    // dialogResult == IDOK at this point
+    // Settings were already applied via callback, just ensure final state
+    LoadConfig();
     SetDebugLoggingEnabled(m_config.debugLogging);
-
-    // Keep process-level dark mode in sync with the current system app
-    // theme so that shell-provided menus remain consistent with Windows.
-    ThemeHelper::AllowDarkModeForApp(ThemeHelper::IsSystemInDarkMode());
-
-    // Propagate updated config to tray icon
-    if (m_pTrayIcon)
-    {
-        m_pTrayIcon->SetConfigSource(&m_config);
-    }
-
-    if (m_pTaskbarOverlay)
-    {
-        m_pTaskbarOverlay->SetDarkTheme(m_config.darkTheme);
-        m_pTaskbarOverlay->SetOverlayStyle(m_config.overlayFontSize,
-                                           m_config.overlayDownloadColor,
-                                           m_config.overlayUploadColor);
-    }
-
-    // Apply side-effects similar to ApplySettingsFromDialog in main.cpp
-    bool needsTimerUpdate = (m_config.updateInterval != oldConfig.updateInterval);
-    bool historyChanged = (m_config.historyAutoTrimDays != oldConfig.historyAutoTrimDays);
-    bool languageChanged = (m_config.language != oldConfig.language);
-
-    if (needsTimerUpdate)
-    {
-        KillTimer(m_hwnd, TIMER_UPDATE_NETWORK);
-        SetTimer(m_hwnd, TIMER_UPDATE_NETWORK, m_config.updateInterval, nullptr);
-    }
-
-    if (historyChanged && m_config.historyAutoTrimDays > 0)
-    {
-        HistoryLogger::Instance().TrimToRecentDays(m_config.historyAutoTrimDays);
-    }
-
-    if (languageChanged)
-    {
-        ApplyLanguageFromConfig();
-    }
-
-    // Force immediate refresh so UI reflects new settings
     OnTimer();
 }
 

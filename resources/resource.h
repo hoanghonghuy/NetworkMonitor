@@ -199,6 +199,15 @@
 #define IDC_HOTKEY_COMBO                548
 #define IDC_OVERLAY_FONT_SIZE_COMBO     549
 #define IDC_OVERLAY_COLOR_COMBO         550
+#define IDC_SETTINGS_TAB                551
+#define IDC_DISPLAY_UNIT_LABEL          552
+#define IDC_FONT_SIZE_LABEL             553
+#define IDC_OVERLAY_COLOR_LABEL         554
+#define IDC_HISTORY_TRIM_LABEL          555
+#define IDC_PING_TARGET_LABEL           556
+#define IDC_PING_INTERVAL_LABEL         557
+#define IDC_HOTKEY_LABEL                558
+#define IDC_SETTINGS_BUTTON_APPLY       559
 
 // ============================================================================
 // STANDARD DIALOG IDS
@@ -211,6 +220,9 @@
 #ifndef IDCANCEL
 #define IDCANCEL                        2
 #endif
+
+// Custom dialog result for Apply with reopen
+#define IDAPPLY_REOPEN                  100
 
 // ============================================================================
 // Next default values for new objects

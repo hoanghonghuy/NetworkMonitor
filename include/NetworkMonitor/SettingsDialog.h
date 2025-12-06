@@ -22,8 +22,8 @@ public:
     SettingsDialog();
     ~SettingsDialog();
 
-    // Show the settings dialog modally
-    bool Show(HWND parentWindow, ConfigManager* configManager, NetworkMonitorClass* networkMonitor);
+    // Show the settings dialog modally. Returns IDOK, IDCANCEL, or IDAPPLY_REOPEN
+    INT_PTR Show(HWND parentWindow, ConfigManager* configManager, NetworkMonitorClass* networkMonitor);
 
     // Set callback for when settings are applied
     void SetSettingsChangedCallback(std::function<void()> callback);
@@ -38,6 +38,8 @@ private:
     bool ApplySettingsFromDialog(HWND hDlg);
     void PopulateInterfaceCombo(HWND hDlg);
     void CenterDialogOnScreen(HWND hDlg);
+    void InitializeTabControl(HWND hDlg);
+    void SwitchTab(HWND hDlg, int tabIndex);
 
     // Member variables
     HWND m_hDialog;

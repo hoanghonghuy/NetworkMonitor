@@ -18,6 +18,33 @@
 namespace NetworkMonitor
 {
 
+// Tab Control subclass procedure for dark theme
+static WNDPROC s_originalTabProc = nullptr;
+static LRESULT CALLBACK DarkTabProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (msg == WM_ERASEBKGND)
+    {
+        HDC hdc = reinterpret_cast<HDC>(wParam);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        HBRUSH hBrush = CreateSolidBrush(RGB(32, 32, 32));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+        return TRUE;
+    }
+    return CallWindowProc(s_originalTabProc, hwnd, msg, wParam, lParam);
+}
+
+// Shared color presets for overlay colors
+struct OverlayColorPreset { COLORREF down; COLORREF up; const wchar_t* label; };
+static const OverlayColorPreset s_overlayColorPresets[] = {
+    {RGB(0, 255, 255), RGB(0, 255, 0), L"Cyan/Green (Default)"},
+    {RGB(50, 255, 100), RGB(255, 180, 50), L"Green/Orange"},
+    {RGB(100, 200, 255), RGB(255, 100, 100), L"Blue/Red"},
+    {RGB(255, 255, 255), RGB(200, 200, 200), L"White/Gray"},
+};
+static const int s_overlayColorPresetCount = 4;
+
 SettingsDialog::SettingsDialog()
     : m_hDialog(nullptr)
     , m_pConfigManager(nullptr)
@@ -30,11 +57,11 @@ SettingsDialog::~SettingsDialog()
 {
 }
 
-bool SettingsDialog::Show(HWND parentWindow, ConfigManager* configManager, NetworkMonitorClass* networkMonitor)
+INT_PTR SettingsDialog::Show(HWND parentWindow, ConfigManager* configManager, NetworkMonitorClass* networkMonitor)
 {
     if (!configManager)
     {
-        return false;
+        return IDCANCEL;
     }
 
     m_pConfigManager = configManager;
@@ -57,7 +84,7 @@ bool SettingsDialog::Show(HWND parentWindow, ConfigManager* configManager, Netwo
     );
 
     m_isInitializing = false;
-    return (result == IDOK);
+    return result;
 }
 
 void SettingsDialog::SetSettingsChangedCallback(std::function<void()> callback)
@@ -188,6 +215,27 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
             PopulateDialog(hDlg);
             CenterDialogOnScreen(hDlg);
 
+            // Initialize Tab Control
+            InitializeTabControl(hDlg);
+            SwitchTab(hDlg, 0); // Show General tab by default
+
+            // In dark theme, disable visual styles on tab control
+            if (m_configCopy.darkTheme)
+            {
+                HWND hTab = GetDlgItem(hDlg, IDC_SETTINGS_TAB);
+                if (hTab)
+                {
+                    SetWindowTheme(hTab, L"", L"");
+                    // Make tab control owner-draw
+                    LONG_PTR style = GetWindowLongPtrW(hTab, GWL_STYLE);
+                    style |= TCS_OWNERDRAWFIXED;
+                    SetWindowLongPtrW(hTab, GWL_STYLE, style);
+                    // Subclass to handle WM_ERASEBKGND for dark background
+                    s_originalTabProc = reinterpret_cast<WNDPROC>(
+                        SetWindowLongPtrW(hTab, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(DarkTabProc)));
+                }
+            }
+
             // In dark theme, make bottom buttons owner-drawn so we can paint
             // dark backgrounds consistently.
             if (m_configCopy.darkTheme)
@@ -211,6 +259,7 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
 
                 makeOwnerDraw(GetDlgItem(hDlg, IDC_SETTINGS_BUTTON_OPEN_LOG));
                 makeOwnerDraw(GetDlgItem(hDlg, IDOK));
+                makeOwnerDraw(GetDlgItem(hDlg, IDC_SETTINGS_BUTTON_APPLY));
                 makeOwnerDraw(GetDlgItem(hDlg, IDCANCEL));
 
                 // Clear default button to prevent the system from drawing an
@@ -243,9 +292,78 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                     return TRUE;
                 }
 
+                case IDC_SETTINGS_BUTTON_APPLY:
+                {
+                    // Remember current theme before applying
+                    bool oldDarkTheme = m_configCopy.darkTheme;
+                    AppLanguage oldLanguage = m_configCopy.language;
+
+                    // Apply settings without closing dialog
+                    if (ApplySettingsFromDialog(hDlg))
+                    {
+                        if (m_settingsChangedCallback)
+                        {
+                            m_settingsChangedCallback();
+                        }
+
+                        // If theme or language changed, close and signal reopen
+                        if (m_configCopy.darkTheme != oldDarkTheme || 
+                            m_configCopy.language != oldLanguage)
+                        {
+                            EndDialog(hDlg, IDAPPLY_REOPEN);
+                        }
+                    }
+                    return TRUE;
+                }
+
                 case IDCANCEL:
                     EndDialog(hDlg, IDCANCEL);
                     return TRUE;
+            }
+            break;
+        }
+
+        case WM_NOTIFY:
+        {
+            LPNMHDR pnmh = reinterpret_cast<LPNMHDR>(lParam);
+            if (pnmh->idFrom == IDC_SETTINGS_TAB && pnmh->code == TCN_SELCHANGE)
+            {
+                int tabIndex = TabCtrl_GetCurSel(pnmh->hwndFrom);
+                SwitchTab(hDlg, tabIndex);
+                return TRUE;
+            }
+            // Handle Tab Control custom draw for dark background
+            if (pnmh->idFrom == IDC_SETTINGS_TAB && pnmh->code == NM_CUSTOMDRAW && m_configCopy.darkTheme)
+            {
+                LPNMCUSTOMDRAW pNMCD = reinterpret_cast<LPNMCUSTOMDRAW>(lParam);
+                switch (pNMCD->dwDrawStage)
+                {
+                    case CDDS_PREPAINT:
+                        return CDRF_NOTIFYITEMDRAW;
+                    case CDDS_PREERASE:
+                    {
+                        // Fill entire tab control area with dark background
+                        HBRUSH hBrush = CreateSolidBrush(RGB(32, 32, 32));
+                        FillRect(pNMCD->hdc, &pNMCD->rc, hBrush);
+                        DeleteObject(hBrush);
+                        return CDRF_SKIPDEFAULT;
+                    }
+                }
+            }
+            break;
+        }
+
+        case WM_ERASEBKGND:
+        {
+            if (m_configCopy.darkTheme)
+            {
+                HDC hdc = reinterpret_cast<HDC>(wParam);
+                RECT rc;
+                GetClientRect(hDlg, &rc);
+                HBRUSH hBrush = CreateSolidBrush(RGB(32, 32, 32));
+                FillRect(hdc, &rc, hBrush);
+                DeleteObject(hBrush);
+                return TRUE;
             }
             break;
         }
@@ -302,7 +420,8 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 if (pDrawItem->CtlType == ODT_BUTTON)
                 {
                     UINT id = pDrawItem->CtlID;
-                    if (id == IDC_SETTINGS_BUTTON_OPEN_LOG || id == IDOK || id == IDCANCEL)
+                    if (id == IDC_SETTINGS_BUTTON_OPEN_LOG || id == IDOK || 
+                        id == IDC_SETTINGS_BUTTON_APPLY || id == IDCANCEL)
                     {
                         HDC hdc = pDrawItem->hDC;
                         RECT rc = pDrawItem->rcItem;
@@ -344,6 +463,41 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
 
                         return TRUE;
                     }
+                }
+                // Handle Tab Control owner-draw
+                else if (pDrawItem->CtlType == ODT_TAB)
+                {
+                    HDC hdc = pDrawItem->hDC;
+                    RECT rc = pDrawItem->rcItem;
+                    bool selected = (pDrawItem->itemState & ODS_SELECTED) != 0;
+
+                    // Dark background for tab
+                    COLORREF backColor = selected ? RGB(50, 50, 50) : RGB(32, 32, 32);
+                    COLORREF textColor = RGB(230, 230, 230);
+
+                    HBRUSH hBrush = CreateSolidBrush(backColor);
+                    FillRect(hdc, &rc, hBrush);
+                    DeleteObject(hBrush);
+
+                    // Draw border
+                    HBRUSH hBorder = CreateSolidBrush(RGB(70, 70, 70));
+                    FrameRect(hdc, &rc, hBorder);
+                    DeleteObject(hBorder);
+
+                    // Get tab text
+                    TCITEM tci = {};
+                    wchar_t text[64] = {};
+                    tci.mask = TCIF_TEXT;
+                    tci.pszText = text;
+                    tci.cchTextMax = static_cast<int>(std::size(text));
+                    TabCtrl_GetItem(pDrawItem->hwndItem, pDrawItem->itemID, &tci);
+
+                    // Draw text
+                    SetBkMode(hdc, TRANSPARENT);
+                    SetTextColor(hdc, textColor);
+                    DrawTextW(hdc, text, -1, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+                    return TRUE;
                 }
             }
             break;
@@ -730,21 +884,14 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
     HWND hOverlayColor = GetDlgItem(hDlg, IDC_OVERLAY_COLOR_COMBO);
     if (hOverlayColor)
     {
-        struct ColorOption { COLORREF down; COLORREF up; const wchar_t* label; };
-        const ColorOption colors[] = {
-            {RGB(0, 255, 255), RGB(0, 255, 0), L"Cyan/Green (Default)"},
-            {RGB(50, 255, 100), RGB(255, 180, 50), L"Green/Orange"},
-            {RGB(100, 200, 255), RGB(255, 100, 100), L"Blue/Red"},
-            {RGB(255, 255, 255), RGB(200, 200, 200), L"White/Gray"},
-        };
-
         int selectedIndex = 0;
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < s_overlayColorPresetCount; i++)
         {
-            int index = static_cast<int>(SendMessageW(hOverlayColor, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(colors[i].label)));
-            // Pack both colors: download in low DWORD, upload in high DWORD (use index)
+            int index = static_cast<int>(SendMessageW(hOverlayColor, CB_ADDSTRING, 0, 
+                reinterpret_cast<LPARAM>(s_overlayColorPresets[i].label)));
             SendMessageW(hOverlayColor, CB_SETITEMDATA, index, i);
-            if (m_configCopy.overlayDownloadColor == colors[i].down && m_configCopy.overlayUploadColor == colors[i].up)
+            if (m_configCopy.overlayDownloadColor == s_overlayColorPresets[i].down && 
+                m_configCopy.overlayUploadColor == s_overlayColorPresets[i].up)
             {
                 selectedIndex = index;
             }
@@ -970,21 +1117,10 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     if (hOverlayColor)
     {
         int sel = static_cast<int>(SendMessageW(hOverlayColor, CB_GETCURSEL, 0, 0));
-        if (sel != CB_ERR)
+        if (sel != CB_ERR && sel < s_overlayColorPresetCount)
         {
-            // Use same color presets as in PopulateDialog
-            struct ColorOption { COLORREF down; COLORREF up; };
-            const ColorOption colors[] = {
-                {RGB(0, 255, 255), RGB(0, 255, 0)},
-                {RGB(50, 255, 100), RGB(255, 180, 50)},
-                {RGB(100, 200, 255), RGB(255, 100, 100)},
-                {RGB(255, 255, 255), RGB(200, 200, 200)},
-            };
-            if (sel < 4)
-            {
-                m_configCopy.overlayDownloadColor = colors[sel].down;
-                m_configCopy.overlayUploadColor = colors[sel].up;
-            }
+            m_configCopy.overlayDownloadColor = s_overlayColorPresets[sel].down;
+            m_configCopy.overlayUploadColor = s_overlayColorPresets[sel].up;
         }
     }
 
@@ -1061,6 +1197,86 @@ void SettingsDialog::PopulateInterfaceCombo(HWND hDlg)
 void SettingsDialog::CenterDialogOnScreen(HWND hDlg)
 {
     CenterWindowOnScreen(hDlg);
+}
+
+void SettingsDialog::InitializeTabControl(HWND hDlg)
+{
+    HWND hTab = GetDlgItem(hDlg, IDC_SETTINGS_TAB);
+    if (!hTab)
+    {
+        return;
+    }
+
+    TCITEM tie = {};
+    tie.mask = TCIF_TEXT;
+
+    tie.pszText = const_cast<LPWSTR>(L"General");
+    TabCtrl_InsertItem(hTab, 0, &tie);
+
+    tie.pszText = const_cast<LPWSTR>(L"Display");
+    TabCtrl_InsertItem(hTab, 1, &tie);
+
+    tie.pszText = const_cast<LPWSTR>(L"Advanced");
+    TabCtrl_InsertItem(hTab, 2, &tie);
+}
+
+void SettingsDialog::SwitchTab(HWND hDlg, int tabIndex)
+{
+    // General tab controls
+    const int generalControls[] = {
+        IDC_SETTINGS_LABEL_LANGUAGE, IDC_LANGUAGE_COMBO,
+        IDC_AUTOSTART_CHECK, IDC_ENABLE_LOGGING_CHECK,
+        IDC_DEBUG_LOGGING_CHECK, IDC_CONNECTION_NOTIFY_CHECK
+    };
+
+    // Display tab controls
+    const int displayControls[] = {
+        IDC_SETTINGS_LABEL_THEME, IDC_THEME_MODE_COMBO,
+        IDC_SETTINGS_LABEL_INTERVAL, IDC_UPDATE_INTERVAL_COMBO,
+        IDC_DISPLAY_UNIT_LABEL, IDC_DISPLAY_UNIT_COMBO,
+        IDC_FONT_SIZE_LABEL, IDC_OVERLAY_FONT_SIZE_COMBO,
+        IDC_OVERLAY_COLOR_LABEL, IDC_OVERLAY_COLOR_COMBO
+    };
+
+    // Advanced tab controls
+    const int advancedControls[] = {
+        IDC_SETTINGS_LABEL_MONITOR, IDC_INTERFACE_COMBO,
+        IDC_HISTORY_TRIM_LABEL, IDC_HISTORY_AUTO_TRIM_COMBO,
+        IDC_PING_TARGET_LABEL, IDC_PING_TARGET_EDIT,
+        IDC_PING_INTERVAL_LABEL, IDC_PING_INTERVAL_COMBO,
+        IDC_HOTKEY_LABEL, IDC_HOTKEY_COMBO
+    };
+
+    auto showControls = [hDlg](const int* ids, int count, bool show)
+    {
+        int cmdShow = show ? SW_SHOW : SW_HIDE;
+        for (int i = 0; i < count; i++)
+        {
+            HWND hCtrl = GetDlgItem(hDlg, ids[i]);
+            if (hCtrl)
+            {
+                ShowWindow(hCtrl, cmdShow);
+            }
+        }
+    };
+
+    // Hide all, then show selected tab controls
+    showControls(generalControls, _countof(generalControls), false);
+    showControls(displayControls, _countof(displayControls), false);
+    showControls(advancedControls, _countof(advancedControls), false);
+
+    switch (tabIndex)
+    {
+        case 0:
+            showControls(generalControls, _countof(generalControls), true);
+            break;
+        case 1:
+            showControls(displayControls, _countof(displayControls), true);
+            break;
+        case 2:
+            showControls(advancedControls, _countof(advancedControls), true);
+            break;
+    }
 }
 
 } // namespace NetworkMonitor
