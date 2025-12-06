@@ -326,6 +326,9 @@ void Application::ShowSettingsDialog()
     if (m_pTaskbarOverlay)
     {
         m_pTaskbarOverlay->SetDarkTheme(m_config.darkTheme);
+        m_pTaskbarOverlay->SetOverlayStyle(m_config.overlayFontSize,
+                                           m_config.overlayDownloadColor,
+                                           m_config.overlayUploadColor);
     }
 
     // Apply side-effects similar to ApplySettingsFromDialog in main.cpp
