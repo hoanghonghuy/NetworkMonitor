@@ -706,6 +706,52 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
         }
     }
 
+    // Populate font size combo
+    HWND hFontSize = GetDlgItem(hDlg, IDC_OVERLAY_FONT_SIZE_COMBO);
+    if (hFontSize)
+    {
+        const int fontSizes[] = {10, 11, 12, 13, 14, 15, 16};
+        int selectedIndex = -1;
+        for (int size : fontSizes)
+        {
+            wchar_t buf[8];
+            swprintf_s(buf, L"%d", size);
+            int index = static_cast<int>(SendMessageW(hFontSize, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(buf)));
+            SendMessageW(hFontSize, CB_SETITEMDATA, index, size);
+            if (m_configCopy.overlayFontSize == size)
+            {
+                selectedIndex = index;
+            }
+        }
+        SendMessageW(hFontSize, CB_SETCURSEL, selectedIndex >= 0 ? selectedIndex : 3, 0); // Default 13
+    }
+
+    // Populate overlay color combo
+    HWND hOverlayColor = GetDlgItem(hDlg, IDC_OVERLAY_COLOR_COMBO);
+    if (hOverlayColor)
+    {
+        struct ColorOption { COLORREF down; COLORREF up; const wchar_t* label; };
+        const ColorOption colors[] = {
+            {RGB(0, 255, 255), RGB(0, 255, 0), L"Cyan/Green (Default)"},
+            {RGB(50, 255, 100), RGB(255, 180, 50), L"Green/Orange"},
+            {RGB(100, 200, 255), RGB(255, 100, 100), L"Blue/Red"},
+            {RGB(255, 255, 255), RGB(200, 200, 200), L"White/Gray"},
+        };
+
+        int selectedIndex = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            int index = static_cast<int>(SendMessageW(hOverlayColor, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(colors[i].label)));
+            // Pack both colors: download in low DWORD, upload in high DWORD (use index)
+            SendMessageW(hOverlayColor, CB_SETITEMDATA, index, i);
+            if (m_configCopy.overlayDownloadColor == colors[i].down && m_configCopy.overlayUploadColor == colors[i].up)
+            {
+                selectedIndex = index;
+            }
+        }
+        SendMessageW(hOverlayColor, CB_SETCURSEL, selectedIndex, 0);
+    }
+
     // For dark theme, disable visual styles for comboboxes so our
     // WM_CTLCOLOR* handlers can control background/text colors.
     if (m_configCopy.darkTheme)
@@ -903,6 +949,44 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     m_configCopy.pingIntervalMs = newPingInterval;
     m_configCopy.hotkeyModifier = newHotkeyModifier;
     m_configCopy.hotkeyKey = newHotkeyKey;
+
+    // Get font size
+    HWND hFontSize = GetDlgItem(hDlg, IDC_OVERLAY_FONT_SIZE_COMBO);
+    if (hFontSize)
+    {
+        int sel = static_cast<int>(SendMessageW(hFontSize, CB_GETCURSEL, 0, 0));
+        if (sel != CB_ERR)
+        {
+            LRESULT data = SendMessageW(hFontSize, CB_GETITEMDATA, sel, 0);
+            if (data != CB_ERR)
+            {
+                m_configCopy.overlayFontSize = static_cast<int>(data);
+            }
+        }
+    }
+
+    // Get overlay colors
+    HWND hOverlayColor = GetDlgItem(hDlg, IDC_OVERLAY_COLOR_COMBO);
+    if (hOverlayColor)
+    {
+        int sel = static_cast<int>(SendMessageW(hOverlayColor, CB_GETCURSEL, 0, 0));
+        if (sel != CB_ERR)
+        {
+            // Use same color presets as in PopulateDialog
+            struct ColorOption { COLORREF down; COLORREF up; };
+            const ColorOption colors[] = {
+                {RGB(0, 255, 255), RGB(0, 255, 0)},
+                {RGB(50, 255, 100), RGB(255, 180, 50)},
+                {RGB(100, 200, 255), RGB(255, 100, 100)},
+                {RGB(255, 255, 255), RGB(200, 200, 200)},
+            };
+            if (sel < 4)
+            {
+                m_configCopy.overlayDownloadColor = colors[sel].down;
+                m_configCopy.overlayUploadColor = colors[sel].up;
+            }
+        }
+    }
 
     // Save to registry via ConfigManager (ignore errors for now, like main.cpp)
     if (m_pConfigManager)

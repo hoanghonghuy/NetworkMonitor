@@ -89,6 +89,9 @@ bool ConfigManager::LoadConfig(AppConfig& config)
     config.pingIntervalMs = ReadDWORD(hKey, L"PingIntervalMs", 5000);
     config.hotkeyModifier = ReadDWORD(hKey, L"HotkeyModifier", MOD_WIN | MOD_SHIFT);
     config.hotkeyKey = ReadDWORD(hKey, L"HotkeyKey", 'N');
+    config.overlayFontSize = static_cast<int>(ReadDWORD(hKey, L"OverlayFontSize", 13));
+    config.overlayDownloadColor = ReadDWORD(hKey, L"OverlayDownloadColor", RGB(0, 255, 255));
+    config.overlayUploadColor = ReadDWORD(hKey, L"OverlayUploadColor", RGB(0, 255, 0));
 
     RegCloseKey(hKey);
     return true;
@@ -148,6 +151,9 @@ bool ConfigManager::SaveConfig(const AppConfig& config)
     success &= WriteDWORD(hKey, L"PingIntervalMs", config.pingIntervalMs);
     success &= WriteDWORD(hKey, L"HotkeyModifier", config.hotkeyModifier);
     success &= WriteDWORD(hKey, L"HotkeyKey", config.hotkeyKey);
+    success &= WriteDWORD(hKey, L"OverlayFontSize", static_cast<DWORD>(config.overlayFontSize));
+    success &= WriteDWORD(hKey, L"OverlayDownloadColor", config.overlayDownloadColor);
+    success &= WriteDWORD(hKey, L"OverlayUploadColor", config.overlayUploadColor);
 
     // Save auto-start setting
     success &= SetAutoStart(config.autoStart);

@@ -137,6 +137,9 @@ bool Application::Initialize(HINSTANCE hInstance)
         m_pTaskbarOverlay->Show(true);
 
         m_pTaskbarOverlay->SetDarkTheme(m_config.darkTheme);
+        m_pTaskbarOverlay->SetOverlayStyle(m_config.overlayFontSize, 
+                                           m_config.overlayDownloadColor, 
+                                           m_config.overlayUploadColor);
     }
 
     // Create and initialize ping monitor

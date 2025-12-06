@@ -67,6 +67,11 @@ public:
      */
     void SetPingLatency(int latencyMs);
 
+    /**
+     * Set overlay appearance (font size and colors)
+     */
+    void SetOverlayStyle(int fontSize, COLORREF downloadColor, COLORREF uploadColor);
+
 private:
     /**
      * Register window class
@@ -143,6 +148,9 @@ private:
     bool m_darkTheme;
     int m_pingLatency;                          // Ping latency in ms (-1 = unavailable)
     bool m_wasHiddenByFullscreen;               // Was hidden due to fullscreen app
+    int m_fontSize;                             // Configurable font size
+    COLORREF m_downloadColor;                   // Configurable download color
+    COLORREF m_uploadColor;                     // Configurable upload color
 
     // Check if foreground window is fullscreen
     static bool IsForegroundWindowFullscreen();

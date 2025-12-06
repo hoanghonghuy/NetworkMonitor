@@ -27,6 +27,9 @@ TaskbarOverlay::TaskbarOverlay()
     , m_darkTheme(false)
     , m_pingLatency(-1)
     , m_wasHiddenByFullscreen(false)
+    , m_fontSize(13)
+    , m_downloadColor(RGB(0, 255, 255))  // Cyan
+    , m_uploadColor(RGB(0, 255, 0))      // Green
     , m_memDC(nullptr)
     , m_memBitmap(nullptr)
     , m_oldBitmap(nullptr)
@@ -515,8 +518,8 @@ void TaskbarOverlay::OnPaint()
     RECT line1Rect = {5, startY, rect.right - 5, startY + lineHeight};
     RECT line2Rect = {5, startY + lineHeight, rect.right - 5, startY + lineHeight * 2};
 
-    COLORREF downColor = m_darkTheme ? RGB(120, 255, 160) : RGB(50, 255, 100);
-    COLORREF upColor   = m_darkTheme ? RGB(255, 210, 120) : RGB(255, 180, 50);
+    COLORREF downColor = m_downloadColor;
+    COLORREF upColor   = m_uploadColor;
 
     // Draw Download line - GREEN color
     SetTextColor(hdcMem, downColor);
@@ -616,7 +619,7 @@ bool TaskbarOverlay::EnsureGraphicsResources(HDC referenceDC, int width, int hei
     if (!m_font)
     {
         m_font = CreateFontW(
-            13,                          // Height
+            m_fontSize,                  // Height - use configurable size
             0,                           // Width
             0,                           // Escapement
             0,                           // Orientation
@@ -690,6 +693,27 @@ void TaskbarOverlay::SetPingLatency(int latencyMs)
         {
             InvalidateRect(m_hwnd, nullptr, FALSE);
         }
+    }
+}
+
+void TaskbarOverlay::SetOverlayStyle(int fontSize, COLORREF downloadColor, COLORREF uploadColor)
+{
+    bool needFontRecreate = (m_fontSize != fontSize);
+    m_fontSize = fontSize;
+    m_downloadColor = downloadColor;
+    m_uploadColor = uploadColor;
+
+    // Recreate font if size changed
+    if (needFontRecreate && m_font)
+    {
+        DeleteObject(m_font);
+        m_font = nullptr;
+    }
+
+    // Trigger repaint
+    if (m_hwnd && m_isVisible)
+    {
+        InvalidateRect(m_hwnd, nullptr, FALSE);
     }
 }
 

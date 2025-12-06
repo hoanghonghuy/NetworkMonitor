@@ -169,6 +169,9 @@ struct AppConfig
     UINT pingIntervalMs;             // Ping interval in milliseconds (default: 5000)
     UINT hotkeyModifier;             // Hotkey modifier (MOD_WIN | MOD_SHIFT, etc.)
     UINT hotkeyKey;                  // Hotkey virtual key code (default: 'N')
+    int overlayFontSize;             // Overlay font size (default: 13)
+    COLORREF overlayDownloadColor;   // Overlay download text color (default: cyan)
+    COLORREF overlayUploadColor;     // Overlay upload text color (default: green)
 
     AppConfig()
         : updateInterval(DEFAULT_UPDATE_INTERVAL)
@@ -188,6 +191,9 @@ struct AppConfig
         , pingIntervalMs(5000)
         , hotkeyModifier(MOD_WIN | MOD_SHIFT)
         , hotkeyKey('N')
+        , overlayFontSize(13)
+        , overlayDownloadColor(RGB(0, 255, 255))   // Cyan
+        , overlayUploadColor(RGB(0, 255, 0))       // Green
     {
     }
 };

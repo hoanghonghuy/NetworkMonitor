@@ -197,6 +197,8 @@
 #define IDC_PING_TARGET_EDIT            546
 #define IDC_PING_INTERVAL_COMBO         547
 #define IDC_HOTKEY_COMBO                548
+#define IDC_OVERLAY_FONT_SIZE_COMBO     549
+#define IDC_OVERLAY_COLOR_COMBO         550
 
 // ============================================================================
 // STANDARD DIALOG IDS
