@@ -86,6 +86,11 @@ public:
      */
     void ShowBalloonNotification(const std::wstring& title, const std::wstring& message);
 
+    /**
+     * Set callback for double-click on tray icon
+     */
+    void SetDoubleClickCallback(std::function<void()> callback);
+
 private:
     /**
      * Create context menu
@@ -113,6 +118,7 @@ private:
     std::function<void(UINT)> m_menuCallback;       // Menu selection callback
     const AppConfig* m_configRef;                   // Current config reference
     std::function<bool()> m_overlayVisibleProvider; // Overlay visibility provider
+    std::function<void()> m_doubleClickCallback;    // Double-click callback
 };
 
 } // namespace NetworkMonitor

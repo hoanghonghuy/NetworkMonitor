@@ -26,6 +26,7 @@ TaskbarOverlay::TaskbarOverlay()
     , m_displayUnit(SpeedUnit::KiloBytesPerSecond)
     , m_darkTheme(false)
     , m_pingLatency(-1)
+    , m_wasHiddenByFullscreen(false)
     , m_memDC(nullptr)
     , m_memBitmap(nullptr)
     , m_oldBitmap(nullptr)
@@ -366,9 +367,24 @@ LRESULT CALLBACK TaskbarOverlay::WindowProc(HWND hwnd, UINT message, WPARAM wPar
             {
                 if (wParam == TIMER_CHECK_VISIBILITY)
                 {
-                    // Check if window should be visible but isn't
-                    if (pThis->m_isVisible)
+                    // Check if fullscreen app is running
+                    bool isFullscreen = IsForegroundWindowFullscreen();
+                    
+                    if (isFullscreen && pThis->m_isVisible && !pThis->m_wasHiddenByFullscreen)
                     {
+                        // Hide overlay while fullscreen app is running
+                        ShowWindow(hwnd, SW_HIDE);
+                        pThis->m_wasHiddenByFullscreen = true;
+                    }
+                    else if (!isFullscreen && pThis->m_wasHiddenByFullscreen)
+                    {
+                        // Restore overlay when fullscreen app exits
+                        pThis->ForceShow();
+                        pThis->m_wasHiddenByFullscreen = false;
+                    }
+                    else if (pThis->m_isVisible && !pThis->m_wasHiddenByFullscreen)
+                    {
+                        // Normal visibility check
                         BOOL isVisible = IsWindowVisible(hwnd);
                         
                         if (!isVisible)
@@ -675,6 +691,42 @@ void TaskbarOverlay::SetPingLatency(int latencyMs)
             InvalidateRect(m_hwnd, nullptr, FALSE);
         }
     }
+}
+
+bool TaskbarOverlay::IsForegroundWindowFullscreen()
+{
+    HWND hForeground = GetForegroundWindow();
+    if (!hForeground)
+    {
+        return false;
+    }
+
+    // Get foreground window rect
+    RECT windowRect;
+    if (!GetWindowRect(hForeground, &windowRect))
+    {
+        return false;
+    }
+
+    // Get monitor info for the foreground window
+    HMONITOR hMonitor = MonitorFromWindow(hForeground, MONITOR_DEFAULTTONEAREST);
+    if (!hMonitor)
+    {
+        return false;
+    }
+
+    MONITORINFO monitorInfo = {};
+    monitorInfo.cbSize = sizeof(MONITORINFO);
+    if (!GetMonitorInfo(hMonitor, &monitorInfo))
+    {
+        return false;
+    }
+
+    // Check if window covers the entire monitor
+    return (windowRect.left <= monitorInfo.rcMonitor.left &&
+            windowRect.top <= monitorInfo.rcMonitor.top &&
+            windowRect.right >= monitorInfo.rcMonitor.right &&
+            windowRect.bottom >= monitorInfo.rcMonitor.bottom);
 }
 
 } // namespace NetworkMonitor

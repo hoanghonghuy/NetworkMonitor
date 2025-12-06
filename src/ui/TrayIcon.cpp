@@ -202,15 +202,17 @@ void TrayIcon::UpdateTooltip(const NetworkStats& stats, SpeedUnit unit)
         return;
     }
 
-    // Format tooltip text
+    // Format tooltip text with current and peak speeds
     std::wstring downloadStr = FormatSpeed(stats.currentDownloadSpeed, unit);
     std::wstring uploadStr = FormatSpeed(stats.currentUploadSpeed, unit);
+    std::wstring peakDownStr = FormatSpeed(stats.peakDownloadSpeed, unit);
+    std::wstring peakUpStr = FormatSpeed(stats.peakUploadSpeed, unit);
 
     std::wstring tooltip = APP_NAME;
     tooltip += L"\n";
-    tooltip += L"↓ " + downloadStr;
+    tooltip += L"↓ " + downloadStr + L" (peak: " + peakDownStr + L")";
     tooltip += L"\n";
-    tooltip += L"↑ " + uploadStr;
+    tooltip += L"↑ " + uploadStr + L" (peak: " + peakUpStr + L")";
 
     // Update tooltip
     wcscpy_s(m_notifyIconData.szTip, tooltip.c_str());
@@ -277,6 +279,16 @@ bool TrayIcon::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam)
         {
             // Left click - show main window or do nothing
             // Can be customized based on needs
+            return true;
+        }
+
+        case WM_LBUTTONDBLCLK:
+        {
+            // Double-click - open Dashboard
+            if (m_doubleClickCallback)
+            {
+                m_doubleClickCallback();
+            }
             return true;
         }
 
@@ -477,6 +489,11 @@ void TrayIcon::ShowBalloonNotification(const std::wstring& title, const std::wst
     // Clear the balloon after showing
     m_notifyIconData.szInfoTitle[0] = L'\0';
     m_notifyIconData.szInfo[0] = L'\0';
+}
+
+void TrayIcon::SetDoubleClickCallback(std::function<void()> callback)
+{
+    m_doubleClickCallback = std::move(callback);
 }
 
 } // namespace NetworkMonitor

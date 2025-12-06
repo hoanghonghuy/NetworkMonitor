@@ -142,6 +142,10 @@ private:
     SpeedUnit m_displayUnit;                    // Display unit
     bool m_darkTheme;
     int m_pingLatency;                          // Ping latency in ms (-1 = unavailable)
+    bool m_wasHiddenByFullscreen;               // Was hidden due to fullscreen app
+
+    // Check if foreground window is fullscreen
+    static bool IsForegroundWindowFullscreen();
 
     // Callback
     std::function<void()> m_rightClickCallback; // Right-click callback

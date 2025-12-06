@@ -115,6 +115,10 @@ bool Application::Initialize(HINSTANCE hInstance)
     m_pTrayIcon->SetOverlayVisibilityProvider([this]() -> bool {
         return m_pTaskbarOverlay != nullptr && m_pTaskbarOverlay->IsVisible();
     });
+    m_pTrayIcon->SetDoubleClickCallback([this]() {
+        // Double-click opens Dashboard
+        OnMenuCommand(IDM_DASHBOARD);
+    });
 
     // Create and initialize taskbar overlay (enabled, same behavior as legacy main.cpp)
     m_pTaskbarOverlay = std::make_unique<TaskbarOverlay>();
