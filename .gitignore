@@ -12,3 +12,7 @@ build/
 # Temporary files
 *.log
 *.tmp
+
+# Local docs (not tracked)
+docs/
+notes/

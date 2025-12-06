@@ -24,6 +24,7 @@ Application::Application()
     , m_prevTotalBytesDown(0)
     , m_prevTotalBytesUp(0)
     , m_prevTotalsValid(false)
+    , m_wasConnected(true)
     , m_initialized(false)
 {
 }
@@ -134,8 +135,25 @@ bool Application::Initialize(HINSTANCE hInstance)
         m_pTaskbarOverlay->SetDarkTheme(m_config.darkTheme);
     }
 
+    // Create and initialize ping monitor
+    m_pPingMonitor = std::make_unique<PingMonitor>();
+    if (!m_pPingMonitor->Initialize())
+    {
+        LogDebug(L"Application::Initialize: PingMonitor init failed, continuing without ping");
+        m_pPingMonitor.reset();
+    }
+
     // Start timer for network monitoring updates
     SetTimer(m_hwnd, TIMER_UPDATE_NETWORK, m_config.updateInterval, nullptr);
+
+    // Start timer for ping (every 5 seconds)
+    if (m_pPingMonitor)
+    {
+        SetTimer(m_hwnd, TIMER_PING, 5000, nullptr);
+    }
+
+    // Register hotkeys
+    RegisterHotkeys();
 
     m_initialized = true;
     LogDebug(L"Application::Initialize: succeeded");
@@ -169,6 +187,17 @@ void Application::Cleanup()
 
     LogDebug(L"Application::Cleanup: starting");
 
+    // Unregister hotkeys
+    UnregisterHotkeys();
+
+    // Stop ping monitor
+    if (m_pPingMonitor)
+    {
+        KillTimer(m_hwnd, TIMER_PING);
+        m_pPingMonitor->Cleanup();
+        m_pPingMonitor.reset();
+    }
+
     // Stop network monitoring
     if (m_pNetworkMonitor)
     {
@@ -189,8 +218,6 @@ void Application::Cleanup()
         m_pTrayIcon->Cleanup();
         m_pTrayIcon.reset();
     }
-
-    // Cleanup dialogs (smart pointers will handle deletion)
 
     // Cleanup config manager
     m_pConfigManager.reset();
@@ -449,6 +476,9 @@ void Application::OnTimer()
 
     // Update taskbar overlay
     UpdateTaskbarOverlay(stats);
+
+    // Check connection status for notifications
+    CheckConnectionStatus(stats.isActive);
 }
 
 NetworkStats Application::GetCurrentStatsForConfig()
@@ -585,6 +615,16 @@ LRESULT CALLBACK Application::InstanceWindowProc(HWND hwnd, UINT message, WPARAM
             {
                 OnTimer();
             }
+            else if (wParam == TIMER_PING)
+            {
+                OnPingTimer();
+            }
+            return 0;
+        }
+
+        case WM_HOTKEY:
+        {
+            OnHotkey(static_cast<int>(wParam));
             return 0;
         }
 
@@ -607,8 +647,9 @@ LRESULT CALLBACK Application::InstanceWindowProc(HWND hwnd, UINT message, WPARAM
 
         case WM_DESTROY:
         {
-            // Kill timer
+            // Kill timers
             KillTimer(hwnd, TIMER_UPDATE_NETWORK);
+            KillTimer(hwnd, TIMER_PING);
             
             // Post quit message
             PostQuitMessage(0);
@@ -669,4 +710,100 @@ void Application::CenterDialogOnScreen(HWND hDlg)
     CenterWindowOnScreen(hDlg);
 }
 
+void Application::RegisterHotkeys()
+{
+    if (!m_hwnd)
+    {
+        return;
+    }
+
+    // Win+Shift+N to toggle overlay
+    if (!RegisterHotKey(m_hwnd, HOTKEY_TOGGLE_OVERLAY, MOD_WIN | MOD_SHIFT | MOD_NOREPEAT, 'N'))
+    {
+        LogDebug(L"Application::RegisterHotkeys: Failed to register Win+Shift+N");
+    }
+    else
+    {
+        LogDebug(L"Application::RegisterHotkeys: Registered Win+Shift+N");
+    }
+}
+
+void Application::UnregisterHotkeys()
+{
+    if (!m_hwnd)
+    {
+        return;
+    }
+
+    UnregisterHotKey(m_hwnd, HOTKEY_TOGGLE_OVERLAY);
+    LogDebug(L"Application::UnregisterHotkeys: Unregistered hotkeys");
+}
+
+void Application::OnHotkey(int hotkeyId)
+{
+    if (hotkeyId == HOTKEY_TOGGLE_OVERLAY)
+    {
+        if (m_pTaskbarOverlay)
+        {
+            bool isVisible = m_pTaskbarOverlay->IsVisible();
+            m_pTaskbarOverlay->Show(!isVisible);
+            LogDebug(L"Application::OnHotkey: Toggled overlay visibility");
+        }
+    }
+}
+
+void Application::OnPingTimer()
+{
+    if (m_pPingMonitor)
+    {
+        m_pPingMonitor->Update();
+
+        // Update overlay with ping info
+        if (m_pTaskbarOverlay && m_pTaskbarOverlay->IsVisible())
+        {
+            int latency = m_pPingMonitor->GetLatency();
+            m_pTaskbarOverlay->SetPingLatency(latency);
+        }
+    }
+}
+
+void Application::CheckConnectionStatus(bool hasActiveInterface)
+{
+    if (!m_config.enableConnectionNotification)
+    {
+        m_wasConnected = hasActiveInterface;
+        return;
+    }
+
+    if (m_wasConnected && !hasActiveInterface)
+    {
+        // Disconnected
+        if (m_pTrayIcon)
+        {
+            std::wstring title = LoadStringResource(IDS_NOTIFICATION_DISCONNECTED_TITLE);
+            std::wstring msg = LoadStringResource(IDS_NOTIFICATION_DISCONNECTED_MSG);
+            if (title.empty()) title = L"Network Disconnected";
+            if (msg.empty()) msg = L"No active network connection";
+            m_pTrayIcon->ShowBalloonNotification(title, msg);
+        }
+        LogDebug(L"Application::CheckConnectionStatus: Network disconnected");
+    }
+    else if (!m_wasConnected && hasActiveInterface)
+    {
+        // Reconnected
+        if (m_pTrayIcon)
+        {
+            std::wstring title = LoadStringResource(IDS_NOTIFICATION_CONNECTED_TITLE);
+            std::wstring msg = LoadStringResource(IDS_NOTIFICATION_CONNECTED_MSG);
+            if (title.empty()) title = L"Network Connected";
+            if (msg.empty()) msg = L"Network connection restored";
+            m_pTrayIcon->ShowBalloonNotification(title, msg);
+        }
+        LogDebug(L"Application::CheckConnectionStatus: Network connected");
+    }
+
+    m_wasConnected = hasActiveInterface;
+}
+
 } // namespace NetworkMonitor
+

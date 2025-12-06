@@ -576,6 +576,7 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
     Button_SetCheck(GetDlgItem(hDlg, IDC_AUTOSTART_CHECK), m_configCopy.autoStart ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(GetDlgItem(hDlg, IDC_ENABLE_LOGGING_CHECK), m_configCopy.enableLogging ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(GetDlgItem(hDlg, IDC_DEBUG_LOGGING_CHECK), m_configCopy.debugLogging ? BST_CHECKED : BST_UNCHECKED);
+    Button_SetCheck(GetDlgItem(hDlg, IDC_CONNECTION_NOTIFY_CHECK), m_configCopy.enableConnectionNotification ? BST_CHECKED : BST_UNCHECKED);
 
     // Populate history auto-trim combo
     HWND hTrim = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
@@ -682,6 +683,7 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     bool newAutoStart = (Button_GetCheck(GetDlgItem(hDlg, IDC_AUTOSTART_CHECK)) == BST_CHECKED);
     bool newEnableLogging = (Button_GetCheck(GetDlgItem(hDlg, IDC_ENABLE_LOGGING_CHECK)) == BST_CHECKED);
     bool newDebugLogging = (Button_GetCheck(GetDlgItem(hDlg, IDC_DEBUG_LOGGING_CHECK)) == BST_CHECKED);
+    bool newConnectionNotify = (Button_GetCheck(GetDlgItem(hDlg, IDC_CONNECTION_NOTIFY_CHECK)) == BST_CHECKED);
     bool newDarkTheme = m_configCopy.darkTheme;
 
     // Keep ThemeMode roughly in sync with the dark theme checkbox so that
@@ -766,6 +768,7 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     m_configCopy.autoStart = newAutoStart;
     m_configCopy.enableLogging = newEnableLogging;
     m_configCopy.debugLogging = newDebugLogging;
+    m_configCopy.enableConnectionNotification = newConnectionNotify;
     m_configCopy.darkTheme = newDarkTheme;
     m_configCopy.themeMode = newThemeMode;
     m_configCopy.selectedInterface = newInterface;

@@ -84,6 +84,7 @@ bool ConfigManager::LoadConfig(AppConfig& config)
     config.language = static_cast<AppLanguage>(langValue);
     config.selectedInterface = ReadString(hKey, L"SelectedInterface", L"");
     config.autoStart = IsAutoStartEnabled();
+    config.enableConnectionNotification = ReadDWORD(hKey, L"EnableConnectionNotify", 1) != 0;
 
     RegCloseKey(hKey);
     return true;
@@ -138,6 +139,7 @@ bool ConfigManager::SaveConfig(const AppConfig& config)
     success &= WriteDWORD(hKey, L"HistoryAutoTrimDays", static_cast<DWORD>(trimDays));
     success &= WriteDWORD(hKey, L"Language", static_cast<DWORD>(config.language));
     success &= WriteString(hKey, L"SelectedInterface", config.selectedInterface);
+    success &= WriteDWORD(hKey, L"EnableConnectionNotify", config.enableConnectionNotification ? 1 : 0);
 
     // Save auto-start setting
     success &= SetAutoStart(config.autoStart);

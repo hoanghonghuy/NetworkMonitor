@@ -138,6 +138,11 @@
 #define IDS_SETTINGS_THEME_SYSTEM       478
 #define IDS_SETTINGS_THEME_LIGHT        479
 #define IDS_SETTINGS_THEME_DARK         480
+#define IDS_NOTIFICATION_DISCONNECTED_TITLE 481
+#define IDS_NOTIFICATION_DISCONNECTED_MSG   482
+#define IDS_NOTIFICATION_CONNECTED_TITLE    483
+#define IDS_NOTIFICATION_CONNECTED_MSG      484
+#define IDS_SETTINGS_LABEL_CONNECTION_NOTIFY 485
 
 // ============================================================================
 // CONTROL IDS (for dialogs)
@@ -187,6 +192,7 @@
 #define IDC_MESSAGE_TEXT                541
 #define IDC_SETTINGS_LABEL_THEME        542
 #define IDC_THEME_MODE_COMBO            543
+#define IDC_CONNECTION_NOTIFY_CHECK     544
 
 // ============================================================================
 // STANDARD DIALOG IDS

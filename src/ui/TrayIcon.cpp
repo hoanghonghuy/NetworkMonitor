@@ -459,4 +459,24 @@ HICON TrayIcon::LoadAppIcon()
     return hIcon;
 }
 
+void TrayIcon::ShowBalloonNotification(const std::wstring& title, const std::wstring& message)
+{
+    if (!m_initialized)
+    {
+        return;
+    }
+
+    m_notifyIconData.uFlags = NIF_INFO;
+    m_notifyIconData.dwInfoFlags = NIIF_INFO;
+
+    wcsncpy_s(m_notifyIconData.szInfoTitle, title.c_str(), _TRUNCATE);
+    wcsncpy_s(m_notifyIconData.szInfo, message.c_str(), _TRUNCATE);
+
+    Shell_NotifyIconW(NIM_MODIFY, &m_notifyIconData);
+
+    // Clear the balloon after showing
+    m_notifyIconData.szInfoTitle[0] = L'\0';
+    m_notifyIconData.szInfo[0] = L'\0';
+}
+
 } // namespace NetworkMonitor

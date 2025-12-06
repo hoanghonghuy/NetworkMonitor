@@ -77,6 +77,10 @@ constexpr int MAX_HISTORY_AUTO_TRIM_DAYS = 365;
 
 // Timer IDs
 #define TIMER_UPDATE_NETWORK 3001
+#define TIMER_PING 3002
+
+// Hotkey IDs
+#define HOTKEY_TOGGLE_OVERLAY 4001
 
 // ============================================================================
 // NAMESPACE DECLARATION
@@ -160,6 +164,7 @@ struct AppConfig
     int historyAutoTrimDays;
     AppLanguage language;            // UI language
     std::wstring selectedInterface;  // Selected interface name (empty = all)
+    bool enableConnectionNotification; // Show notification on connect/disconnect
 
     AppConfig()
         : updateInterval(DEFAULT_UPDATE_INTERVAL)
@@ -174,6 +179,7 @@ struct AppConfig
         , historyAutoTrimDays(DEFAULT_HISTORY_AUTO_TRIM_DAYS)
         , language(AppLanguage::SystemDefault)
         , selectedInterface(L"")
+        , enableConnectionNotification(true)
     {
     }
 };

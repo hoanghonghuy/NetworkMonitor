@@ -210,6 +210,7 @@
     <ClCompile Include="src\ui\TaskbarOverlay.cpp" />
     <ClCompile Include="src\ui\ThemeHelper.cpp" />
     <ClCompile Include="src\core\HistoryLogger.cpp" />
+    <ClCompile Include="src\core\PingMonitor.cpp" />
     <ClCompile Include="third_party\sqlite\sqlite3.c" />
   </ItemGroup>
   <!-- ====================================================================== -->
@@ -229,6 +230,7 @@
     <ClInclude Include="include\NetworkMonitor\TaskbarOverlay.h" />
     <ClInclude Include="include\NetworkMonitor\ThemeHelper.h" />
     <ClInclude Include="include\NetworkMonitor\HistoryLogger.h" />
+    <ClInclude Include="include\NetworkMonitor\PingMonitor.h" />
     <ClInclude Include="resources\resource.h" />
   </ItemGroup>
   <!-- ====================================================================== -->

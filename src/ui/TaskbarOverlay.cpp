@@ -25,6 +25,7 @@ TaskbarOverlay::TaskbarOverlay()
     , m_uploadSpeed(0.0)
     , m_displayUnit(SpeedUnit::KiloBytesPerSecond)
     , m_darkTheme(false)
+    , m_pingLatency(-1)
     , m_memDC(nullptr)
     , m_memBitmap(nullptr)
     , m_oldBitmap(nullptr)
@@ -511,6 +512,20 @@ void TaskbarOverlay::OnPaint()
     DrawTextW(hdcMem, line2.c_str(), -1, &line2Rect,
               DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
+    // Draw Ping latency on the right side (if available)
+    if (m_pingLatency >= 0)
+    {
+        wchar_t pingBuffer[32];
+        swprintf_s(pingBuffer, L"%dms", m_pingLatency);
+
+        COLORREF pingColor = m_darkTheme ? RGB(100, 200, 255) : RGB(0, 150, 220);
+        SetTextColor(hdcMem, pingColor);
+
+        RECT pingRect = {rect.right - 45, startY, rect.right - 2, startY + lineHeight * 2};
+        DrawTextW(hdcMem, pingBuffer, -1, &pingRect,
+                  DT_SINGLELINE | DT_RIGHT | DT_VCENTER);
+    }
+
     // Copy to screen
     BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
 
@@ -624,6 +639,19 @@ void TaskbarOverlay::OnRightButtonUp()
 void TaskbarOverlay::OnDisplayChange()
 {
     PositionOnTaskbar();
+}
+
+void TaskbarOverlay::SetPingLatency(int latencyMs)
+{
+    if (m_pingLatency != latencyMs)
+    {
+        m_pingLatency = latencyMs;
+        // Trigger repaint to update display
+        if (m_hwnd && m_isVisible)
+        {
+            InvalidateRect(m_hwnd, nullptr, FALSE);
+        }
+    }
 }
 
 } // namespace NetworkMonitor

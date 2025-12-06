@@ -16,6 +16,7 @@ set(TEST_SOURCES
     ../src/core/NetworkMonitor.cpp
     ../src/core/NetworkCalculator.cpp
     ../src/core/ConfigManager.cpp
+    ../src/core/PingMonitor.cpp
     ../src/core/Utils.cpp
     ../src/ui/TrayIcon.cpp
     ../src/ui/TaskbarOverlay.cpp

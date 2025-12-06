@@ -79,6 +79,13 @@ public:
      */
     void SetOverlayVisibilityProvider(std::function<bool()> provider);
 
+    /**
+     * Show balloon notification
+     * @param title Notification title
+     * @param message Notification message
+     */
+    void ShowBalloonNotification(const std::wstring& title, const std::wstring& message);
+
 private:
     /**
      * Create context menu
