@@ -17,7 +17,7 @@ class ConfigManager;
 class NetworkMonitorClass;
 
 class SettingsDialog
-{
+{x
 public:
     SettingsDialog();
     ~SettingsDialog();

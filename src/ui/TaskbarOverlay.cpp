@@ -512,13 +512,36 @@ void TaskbarOverlay::OnPaint()
     DrawTextW(hdcMem, line2.c_str(), -1, &line2Rect,
               DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
-    // Draw Ping latency on the right side (if available)
-    if (m_pingLatency >= 0)
+    // Draw Ping latency on the right side
     {
         wchar_t pingBuffer[32];
-        swprintf_s(pingBuffer, L"%dms", m_pingLatency);
+        COLORREF pingColor;
 
-        COLORREF pingColor = m_darkTheme ? RGB(100, 200, 255) : RGB(0, 150, 220);
+        if (m_pingLatency < 0)
+        {
+            // Timeout or unavailable - show "---" in red
+            wcscpy_s(pingBuffer, L"---");
+            pingColor = m_darkTheme ? RGB(255, 100, 100) : RGB(220, 50, 50);
+        }
+        else if (m_pingLatency < 100)
+        {
+            // Good latency - green
+            swprintf_s(pingBuffer, L"%dms", m_pingLatency);
+            pingColor = m_darkTheme ? RGB(100, 255, 130) : RGB(50, 200, 80);
+        }
+        else if (m_pingLatency < 200)
+        {
+            // Medium latency - yellow/orange
+            swprintf_s(pingBuffer, L"%dms", m_pingLatency);
+            pingColor = m_darkTheme ? RGB(255, 220, 100) : RGB(230, 180, 50);
+        }
+        else
+        {
+            // High latency - red
+            swprintf_s(pingBuffer, L"%dms", m_pingLatency);
+            pingColor = m_darkTheme ? RGB(255, 100, 100) : RGB(220, 50, 50);
+        }
+
         SetTextColor(hdcMem, pingColor);
 
         RECT pingRect = {rect.right - 45, startY, rect.right - 2, startY + lineHeight * 2};
