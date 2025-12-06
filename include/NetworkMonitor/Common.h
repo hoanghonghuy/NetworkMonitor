@@ -77,6 +77,10 @@ constexpr int MAX_HISTORY_AUTO_TRIM_DAYS = 365;
 
 // Timer IDs
 #define TIMER_UPDATE_NETWORK 3001
+#define TIMER_PING 3002
+
+// Hotkey IDs
+#define HOTKEY_TOGGLE_OVERLAY 4001
 
 // ============================================================================
 // NAMESPACE DECLARATION
@@ -104,6 +108,14 @@ enum class AppLanguage
     SystemDefault = 0,
     English = 1,
     Vietnamese = 2
+};
+
+// Application theme mode
+enum class ThemeMode
+{
+    SystemDefault = 0,
+    Light = 1,
+    Dark = 2
 };
 
 // Network statistics for a single interface
@@ -147,9 +159,16 @@ struct AppConfig
     bool showDownloadSpeed;          // Show download speed
     bool enableLogging;              // Enable history logging
     bool debugLogging;               // Enable debug logging to file
+    bool darkTheme;
+    ThemeMode themeMode;             // Theme selection mode
     int historyAutoTrimDays;
     AppLanguage language;            // UI language
     std::wstring selectedInterface;  // Selected interface name (empty = all)
+    bool enableConnectionNotification; // Show notification on connect/disconnect
+    std::wstring pingTarget;         // Ping target IP/domain (default: 8.8.8.8)
+    UINT pingIntervalMs;             // Ping interval in milliseconds (default: 5000)
+    UINT hotkeyModifier;             // Hotkey modifier (MOD_WIN | MOD_SHIFT, etc.)
+    UINT hotkeyKey;                  // Hotkey virtual key code (default: 'N')
 
     AppConfig()
         : updateInterval(DEFAULT_UPDATE_INTERVAL)
@@ -159,9 +178,16 @@ struct AppConfig
         , showDownloadSpeed(true)
         , enableLogging(true)
         , debugLogging(false)
+        , darkTheme(false)
+        , themeMode(ThemeMode::SystemDefault)
         , historyAutoTrimDays(DEFAULT_HISTORY_AUTO_TRIM_DAYS)
         , language(AppLanguage::SystemDefault)
         , selectedInterface(L"")
+        , enableConnectionNotification(true)
+        , pingTarget(L"8.8.8.8")
+        , pingIntervalMs(5000)
+        , hotkeyModifier(MOD_WIN | MOD_SHIFT)
+        , hotkeyKey('N')
     {
     }
 };

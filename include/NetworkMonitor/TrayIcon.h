@@ -79,6 +79,13 @@ public:
      */
     void SetOverlayVisibilityProvider(std::function<bool()> provider);
 
+    /**
+     * Show balloon notification
+     * @param title Notification title
+     * @param message Notification message
+     */
+    void ShowBalloonNotification(const std::wstring& title, const std::wstring& message);
+
 private:
     /**
      * Create context menu
@@ -100,6 +107,9 @@ private:
     HICON m_iconIdle;                               // Icon when idle
     HICON m_iconActive;                             // Icon when active
     HICON m_iconHigh;                               // Icon when high traffic
+    HICON m_iconIdleDark;                           // Dark theme idle icon
+    HICON m_iconActiveDark;                         // Dark theme active icon
+    HICON m_iconHighDark;                           // Dark theme high traffic icon
     std::function<void(UINT)> m_menuCallback;       // Menu selection callback
     const AppConfig* m_configRef;                   // Current config reference
     std::function<bool()> m_overlayVisibleProvider; // Overlay visibility provider

@@ -9,9 +9,11 @@
 #include "NetworkMonitor/HistoryLogger.h"
 #include "NetworkMonitor/HistoryDialog.h"
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/ThemeHelper.h"
 #include "../../../resources/resource.h"
 #include <windowsx.h>
 #include <commctrl.h>
+#include <uxtheme.h>
 #include <algorithm>
 #include <sstream>
 #include <ctime>
@@ -22,6 +24,14 @@
 
 namespace NetworkMonitor
 {
+
+namespace
+{
+    // Property names for associating original WndProc and DashboardDialog
+    // instance with the header control.
+    const wchar_t* HEADER_OLDPROC_PROP = L"NM_DASHBOARD_HEADER_OLDPROC";
+    const wchar_t* HEADER_THIS_PROP    = L"NM_DASHBOARD_HEADER_THIS";
+}
 
 DashboardDialog::DashboardDialog()
     : m_hDialog(nullptr)
@@ -94,6 +104,12 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
             if (!dashTitle.empty())
             {
                 SetWindowTextW(hDlg, dashTitle.c_str());
+            }
+
+            // Apply dark title bar if enabled
+            if (m_pConfig)
+            {
+                ThemeHelper::ApplyDarkTitleBar(hDlg, m_pConfig->darkTheme);
             }
 
             std::wstring todayLabel = LoadStringResource(IDS_DASHBOARD_LABEL_TODAY);
@@ -174,6 +190,68 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
                 col.iSubItem = 3;
                 col.fmt = LVCFMT_RIGHT;
                 ListView_InsertColumn(hList, 3, &col);
+
+                if (m_pConfig && m_pConfig->darkTheme)
+                {
+                    ListView_SetBkColor(hList, RGB(24, 24, 24));
+                    ListView_SetTextBkColor(hList, RGB(24, 24, 24));
+                    ListView_SetTextColor(hList, RGB(230, 230, 230));
+
+                    // Disable visual styles on the list itself.
+                    SetWindowTheme(hList, L"", L"");
+
+                    // Subclass the list header so we can paint it fully dark.
+                    HWND hHeader = ListView_GetHeader(hList);
+                    if (hHeader)
+                    {
+                        WNDPROC oldProc = reinterpret_cast<WNDPROC>(
+                            GetWindowLongPtrW(hHeader, GWLP_WNDPROC));
+                        SetPropW(hHeader, HEADER_OLDPROC_PROP,
+                                 reinterpret_cast<HANDLE>(oldProc));
+                        SetPropW(hHeader, HEADER_THIS_PROP,
+                                 reinterpret_cast<HANDLE>(this));
+
+                        SetWindowLongPtrW(hHeader, GWLP_WNDPROC,
+                                          reinterpret_cast<LONG_PTR>(HeaderWndProc));
+
+                        // Also disable visual styles on the header itself.
+                        SetWindowTheme(hHeader, L"", L"");
+                    }
+
+                }
+            }
+
+            // For dark theme, make bottom buttons owner-drawn so we can
+            // render dark backgrounds consistently.
+            if (m_pConfig && m_pConfig->darkTheme)
+            {
+                auto makeOwnerDraw = [](HWND hButton)
+                {
+                    if (!hButton) return;
+                    LONG_PTR style = GetWindowLongPtrW(hButton, GWL_STYLE);
+                    if ((style & BS_OWNERDRAW) == 0)
+                    {
+                        style &= ~BS_TYPEMASK;
+                        style |= BS_OWNERDRAW;
+                        SetWindowLongPtrW(hButton, GWL_STYLE, style);
+
+                        // Disable visual styles so themed drawing does not
+                        // override our owner-draw dark appearance.
+                        SetWindowTheme(hButton, L"", L"");
+
+                        InvalidateRect(hButton, nullptr, TRUE);
+                        UpdateWindow(hButton);
+                    }
+                };
+
+                makeOwnerDraw(GetDlgItem(hDlg, IDC_HISTORY_MANAGE));
+                makeOwnerDraw(GetDlgItem(hDlg, IDC_DASHBOARD_REFRESH));
+                makeOwnerDraw(GetDlgItem(hDlg, IDOK));
+
+                // Clear default button so the system does not try to paint
+                // a default highlight using the classic white style before
+                // our owner-draw logic runs.
+                SendMessageW(hDlg, DM_SETDEFID, 0, 0);
             }
 
             // Fill data
@@ -201,7 +279,7 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
                 {
                     // Use HistoryDialog class instead of legacy main.cpp dialog
                     HistoryDialog dlg;
-                    dlg.Show(hDlg);
+                    dlg.Show(hDlg, m_pConfig);
                     // After user modifies history, refresh dashboard view
                     PostMessageW(hDlg, WM_COMMAND, MAKEWPARAM(IDC_DASHBOARD_REFRESH, 0), 0);
                     return TRUE;
@@ -217,19 +295,94 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
             break;
         }
 
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORBTN:
+        {
+            if (m_pConfig && m_pConfig->darkTheme)
+            {
+                HDC hdc = reinterpret_cast<HDC>(wParam);
+                static HBRUSH s_darkBrush = nullptr;
+                if (!s_darkBrush)
+                {
+                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
+                }
+
+                SetTextColor(hdc, RGB(230, 230, 230));
+                SetBkMode(hdc, TRANSPARENT);
+
+                return reinterpret_cast<INT_PTR>(s_darkBrush);
+            }
+            break;
+        }
+
         case WM_DRAWITEM:
         {
-            if (wParam == IDC_DASHBOARD_CHART)
+            DRAWITEMSTRUCT* pDrawItem = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+
+            // Owner-draw chart (existing behavior)
+            if (wParam == IDC_DASHBOARD_CHART && pDrawItem->CtlType == ODT_STATIC)
             {
-                DRAWITEMSTRUCT* pDrawItem = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
-                if (pDrawItem->CtlType == ODT_STATIC)
+                HDC hdc = pDrawItem->hDC;
+                RECT rc = pDrawItem->rcItem;
+                DrawDashboardChart(hdc, rc);
+                return TRUE;
+            }
+
+            // Owner-draw bottom buttons in dark theme
+            if (m_pConfig && m_pConfig->darkTheme && pDrawItem->CtlType == ODT_BUTTON)
+            {
+                UINT id = pDrawItem->CtlID;
+                if (id == IDC_HISTORY_MANAGE || id == IDC_DASHBOARD_REFRESH || id == IDOK)
                 {
                     HDC hdc = pDrawItem->hDC;
                     RECT rc = pDrawItem->rcItem;
-                    DrawDashboardChart(hdc, rc);
+
+                    bool pressed = (pDrawItem->itemState & ODS_SELECTED) != 0;
+                    bool focused = (pDrawItem->itemState & ODS_FOCUS) != 0;
+                    bool disabled = (pDrawItem->itemState & ODS_DISABLED) != 0;
+
+                    COLORREF backColor = pressed ? RGB(50, 50, 50) : RGB(40, 40, 40);
+                    COLORREF borderColor = RGB(90, 90, 90);
+                    COLORREF textColor = disabled ? RGB(160, 160, 160) : RGB(230, 230, 230);
+
+                    // Fill background
+                    HBRUSH hBrush = CreateSolidBrush(backColor);
+                    FillRect(hdc, &rc, hBrush);
+                    DeleteObject(hBrush);
+
+                    // Draw border only, keep dark background
+                    HBRUSH hBorder = CreateSolidBrush(borderColor);
+                    FrameRect(hdc, &rc, hBorder);
+                    DeleteObject(hBorder);
+
+                    // Draw button text
+                    wchar_t text[128] = {0};
+                    GetWindowTextW(pDrawItem->hwndItem, text, static_cast<int>(std::size(text)));
+
+                    SetBkMode(hdc, TRANSPARENT);
+                    SetTextColor(hdc, textColor);
+
+                    RECT textRc = rc;
+                    InflateRect(&textRc, -4, -2);
+                    DrawTextW(hdc, text, -1, &textRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+                    // Focus rectangle
+                    if (focused)
+                    {
+                        RECT focusRc = rc;
+                        InflateRect(&focusRc, -3, -3);
+                        DrawFocusRect(hdc, &focusRc);
+                    }
+
                     return TRUE;
                 }
             }
+            break;
+        }
+        case WM_NOTIFY:
+        {
+            // Currently unused; header is subclassed directly in dark theme.
             break;
         }
     }
@@ -327,7 +480,16 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
         return;
     }
 
-    HBRUSH backBrush = CreateSolidBrush(GetSysColor(COLOR_WINDOW));
+    bool darkTheme = (m_pConfig && m_pConfig->darkTheme);
+
+    // Slightly lighter background for dark theme so the chart does not
+    // appear too black compared to the rest of the dialog.
+    COLORREF backColor = darkTheme ? RGB(28, 28, 28) : GetSysColor(COLOR_WINDOW);
+    COLORREF borderColor = darkTheme ? RGB(80, 80, 80) : RGB(200, 200, 200);
+    COLORREF downColor = darkTheme ? RGB(80, 200, 120) : RGB(0, 128, 0);
+    COLORREF upColor = darkTheme ? RGB(80, 160, 240) : RGB(0, 0, 200);
+
+    HBRUSH backBrush = CreateSolidBrush(backColor);
     FillRect(hdc, &rc, backBrush);
     DeleteObject(backBrush);
 
@@ -343,7 +505,9 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
 
     if (samples.empty())
     {
-        Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
+        HBRUSH frameBrush = CreateSolidBrush(borderColor);
+        FrameRect(hdc, &rc, frameBrush);
+        DeleteObject(frameBrush);
         return;
     }
 
@@ -356,7 +520,9 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
 
     if (maxValue == 0)
     {
-        Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
+        HBRUSH frameBrush = CreateSolidBrush(borderColor);
+        FrameRect(hdc, &rc, frameBrush);
+        DeleteObject(frameBrush);
         return;
     }
 
@@ -366,9 +532,11 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
     inner.top += 4;
     inner.bottom -= 4;
 
-    HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-    HPEN oldPen = reinterpret_cast<HPEN>(SelectObject(hdc, borderPen));
-    Rectangle(hdc, inner.left, inner.top, inner.right, inner.bottom);
+    // Draw only the border of the chart area, keeping the dark
+    // background that we already filled above.
+    HBRUSH frameBrush = CreateSolidBrush(borderColor);
+    FrameRect(hdc, &inner, frameBrush);
+    DeleteObject(frameBrush);
 
     int width = inner.right - inner.left;
     int height = inner.bottom - inner.top;
@@ -376,8 +544,6 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
 
     if (count == 0 || width <= 0 || height <= 0)
     {
-        SelectObject(hdc, oldPen);
-        DeleteObject(borderPen);
         return;
     }
 
@@ -421,10 +587,10 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
         upPoints.push_back(pu);
     }
 
-    HPEN downPen = CreatePen(PS_SOLID, 1, RGB(0, 128, 0));
-    HPEN upPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 200));
+    HPEN downPen = CreatePen(PS_SOLID, 1, downColor);
+    HPEN upPen = CreatePen(PS_SOLID, 1, upColor);
 
-    SelectObject(hdc, downPen);
+    HPEN oldPen = reinterpret_cast<HPEN>(SelectObject(hdc, downPen));
     if (!downPoints.empty())
     {
         MoveToEx(hdc, downPoints[0].x, downPoints[0].y, nullptr);
@@ -445,7 +611,6 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
     }
 
     SelectObject(hdc, oldPen);
-    DeleteObject(borderPen);
     DeleteObject(downPen);
     DeleteObject(upPen);
 }
@@ -453,6 +618,119 @@ void DashboardDialog::DrawDashboardChart(HDC hdc, const RECT& rc)
 void DashboardDialog::CenterDialogOnScreen(HWND hDlg)
 {
     CenterWindowOnScreen(hDlg);
+}
+
+LRESULT CALLBACK DashboardDialog::HeaderWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    WNDPROC oldProc = reinterpret_cast<WNDPROC>(GetPropW(hwnd, HEADER_OLDPROC_PROP));
+    DashboardDialog* pThis = reinterpret_cast<DashboardDialog*>(
+        GetPropW(hwnd, HEADER_THIS_PROP));
+
+    if (msg == WM_NCDESTROY)
+    {
+        if (oldProc)
+        {
+            SetWindowLongPtrW(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(oldProc));
+        }
+        RemovePropW(hwnd, HEADER_OLDPROC_PROP);
+        RemovePropW(hwnd, HEADER_THIS_PROP);
+
+        return oldProc ? CallWindowProcW(oldProc, hwnd, msg, wParam, lParam)
+                       : DefWindowProcW(hwnd, msg, wParam, lParam);
+    }
+
+    // If we don't have a dialog instance or config, fall back to original proc
+    if (!(pThis && pThis->m_pConfig && pThis->m_pConfig->darkTheme))
+    {
+        return oldProc ? CallWindowProcW(oldProc, hwnd, msg, wParam, lParam)
+                       : DefWindowProcW(hwnd, msg, wParam, lParam);
+    }
+
+    switch (msg)
+    {
+    case WM_ERASEBKGND:
+        // We'll handle background in WM_PAINT
+        return 1;
+
+    case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        if (!hdc)
+        {
+            break;
+        }
+
+        RECT rcClient;
+        GetClientRect(hwnd, &rcClient);
+
+        // Fill entire header background dark
+        HBRUSH hBack = CreateSolidBrush(RGB(32, 32, 32));
+        FillRect(hdc, &rcClient, hBack);
+        DeleteObject(hBack);
+
+        int count = static_cast<int>(SendMessageW(hwnd, HDM_GETITEMCOUNT, 0, 0));
+        for (int i = 0; i < count; ++i)
+        {
+            RECT rcItem;
+            if (!SendMessageW(hwnd, HDM_GETITEMRECT, static_cast<WPARAM>(i),
+                              reinterpret_cast<LPARAM>(&rcItem)))
+            {
+                continue;
+            }
+
+            WCHAR text[128] = {0};
+            HDITEMW item = {};
+            item.mask = HDI_TEXT | HDI_FORMAT;
+            item.pszText = text;
+            item.cchTextMax = static_cast<int>(sizeof(text) / sizeof(text[0]));
+
+            if (!SendMessageW(hwnd, HDM_GETITEMW, static_cast<WPARAM>(i),
+                              reinterpret_cast<LPARAM>(&item)))
+            {
+                continue;
+            }
+
+            SetBkMode(hdc, TRANSPARENT);
+            SetTextColor(hdc, RGB(230, 230, 230));
+
+            RECT rcText = rcItem;
+            rcText.left += 4;
+
+            UINT align = DT_SINGLELINE | DT_VCENTER;
+            if (item.fmt & HDF_CENTER)
+            {
+                align |= DT_CENTER;
+            }
+            else if (item.fmt & HDF_RIGHT)
+            {
+                align |= DT_RIGHT;
+            }
+            else
+            {
+                align |= DT_LEFT;
+            }
+
+            DrawTextW(hdc, text, -1, &rcText, align);
+        }
+
+        // Bottom border line
+        HPEN hPen = CreatePen(PS_SOLID, 1, RGB(90, 90, 90));
+        HPEN hOldPen = reinterpret_cast<HPEN>(SelectObject(hdc, hPen));
+        MoveToEx(hdc, rcClient.left, rcClient.bottom - 1, nullptr);
+        LineTo(hdc, rcClient.right, rcClient.bottom - 1);
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+    default:
+        break;
+    }
+
+    return oldProc ? CallWindowProcW(oldProc, hwnd, msg, wParam, lParam)
+                   : DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
 } // namespace NetworkMonitor

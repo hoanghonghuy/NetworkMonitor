@@ -8,9 +8,11 @@
 #include "NetworkMonitor/ConfigManager.h"
 #include "NetworkMonitor/NetworkMonitor.h"
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/ThemeHelper.h"
 #include "../../../resources/resource.h"
 #include <windowsx.h>
 #include <commctrl.h>
+#include <uxtheme.h>
 #include <vector>
 
 namespace NetworkMonitor
@@ -101,6 +103,9 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 SetWindowTextW(hDlg, title.c_str());
             }
 
+            // Apply dark title bar if enabled
+            ThemeHelper::ApplyDarkTitleBar(hDlg, m_configCopy.darkTheme);
+
             std::wstring generalText = LoadStringResource(IDS_SETTINGS_GROUP_GENERAL);
             if (!generalText.empty())
             {
@@ -155,6 +160,12 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 SetDlgItemTextW(hDlg, IDC_DEBUG_LOGGING_CHECK, debugLogText.c_str());
             }
 
+            std::wstring darkThemeText = LoadStringResource(IDS_SETTINGS_LABEL_DARK_THEME);
+            if (!darkThemeText.empty())
+            {
+                SetDlgItemTextW(hDlg, IDC_SETTINGS_LABEL_THEME, darkThemeText.c_str());
+            }
+
             std::wstring unitLabelText = LoadStringResource(IDS_SETTINGS_LABEL_SPEED_UNIT);
             if (!unitLabelText.empty())
             {
@@ -176,6 +187,36 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
             // Populate dialog controls
             PopulateDialog(hDlg);
             CenterDialogOnScreen(hDlg);
+
+            // In dark theme, make bottom buttons owner-drawn so we can paint
+            // dark backgrounds consistently.
+            if (m_configCopy.darkTheme)
+            {
+                auto makeOwnerDraw = [](HWND hButton)
+                {
+                    if (!hButton) return;
+                    LONG_PTR style = GetWindowLongPtrW(hButton, GWL_STYLE);
+                    if ((style & BS_OWNERDRAW) == 0)
+                    {
+                        style &= ~BS_TYPEMASK;  // clear existing button type (e.g., BS_DEFPUSHBUTTON)
+                        style |= BS_OWNERDRAW;
+                        SetWindowLongPtrW(hButton, GWL_STYLE, style);
+
+                        // Force immediate redraw using owner-draw logic so
+                        // the initial frame/background is also dark.
+                        InvalidateRect(hButton, nullptr, TRUE);
+                        UpdateWindow(hButton);
+                    }
+                };
+
+                makeOwnerDraw(GetDlgItem(hDlg, IDC_SETTINGS_BUTTON_OPEN_LOG));
+                makeOwnerDraw(GetDlgItem(hDlg, IDOK));
+                makeOwnerDraw(GetDlgItem(hDlg, IDCANCEL));
+
+                // Clear default button to prevent the system from drawing an
+                // initial white default highlight before owner-draw kicks in.
+                SendMessageW(hDlg, DM_SETDEFID, 0, 0);
+            }
             return TRUE;
         }
 
@@ -205,6 +246,105 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 case IDCANCEL:
                     EndDialog(hDlg, IDCANCEL);
                     return TRUE;
+            }
+            break;
+        }
+
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORBTN:
+        case WM_CTLCOLORLISTBOX:
+        case WM_CTLCOLOREDIT:
+        {
+            if (m_configCopy.darkTheme)
+            {
+                HDC hdc = reinterpret_cast<HDC>(wParam);
+                static HBRUSH s_darkBrush = nullptr;
+                if (!s_darkBrush)
+                {
+                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
+                }
+
+                HWND hwndCtl = reinterpret_cast<HWND>(lParam);
+                int ctrlId = GetDlgCtrlID(hwndCtl);
+
+                bool isComboArea =
+                    (ctrlId == IDC_LANGUAGE_COMBO) ||
+                    (ctrlId == IDC_UPDATE_INTERVAL_COMBO) ||
+                    (ctrlId == IDC_DISPLAY_UNIT_COMBO) ||
+                    (ctrlId == IDC_INTERFACE_COMBO) ||
+                    (ctrlId == IDC_HISTORY_AUTO_TRIM_COMBO) ||
+                    (ctrlId == IDC_THEME_MODE_COMBO);
+
+                if (message == WM_CTLCOLORLISTBOX || message == WM_CTLCOLOREDIT || isComboArea)
+                {
+                    // For combobox edit/dropdown areas: fill opaque dark background
+                    SetTextColor(hdc, RGB(230, 230, 230));
+                    SetBkColor(hdc, RGB(32, 32, 32));
+                    SetBkMode(hdc, OPAQUE);
+                }
+                else
+                {
+                    // For labels, group boxes, buttons: transparent over dark dialog
+                    SetTextColor(hdc, RGB(230, 230, 230));
+                    SetBkMode(hdc, TRANSPARENT);
+                }
+
+                return reinterpret_cast<INT_PTR>(s_darkBrush);
+            }
+            break;
+        }
+        case WM_DRAWITEM:
+        {
+            if (m_configCopy.darkTheme)
+            {
+                DRAWITEMSTRUCT* pDrawItem = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+                if (pDrawItem->CtlType == ODT_BUTTON)
+                {
+                    UINT id = pDrawItem->CtlID;
+                    if (id == IDC_SETTINGS_BUTTON_OPEN_LOG || id == IDOK || id == IDCANCEL)
+                    {
+                        HDC hdc = pDrawItem->hDC;
+                        RECT rc = pDrawItem->rcItem;
+
+                        bool pressed = (pDrawItem->itemState & ODS_SELECTED) != 0;
+                        bool focused = (pDrawItem->itemState & ODS_FOCUS) != 0;
+                        bool disabled = (pDrawItem->itemState & ODS_DISABLED) != 0;
+
+                        COLORREF backColor = pressed ? RGB(50, 50, 50) : RGB(40, 40, 40);
+                        COLORREF borderColor = RGB(90, 90, 90);
+                        COLORREF textColor = disabled ? RGB(160, 160, 160) : RGB(230, 230, 230);
+
+                        HBRUSH hBrush = CreateSolidBrush(backColor);
+                        FillRect(hdc, &rc, hBrush);
+                        DeleteObject(hBrush);
+
+                        // Draw only the frame so we don't overwrite the
+                        // dark background we just filled.
+                        HBRUSH hBorder = CreateSolidBrush(borderColor);
+                        FrameRect(hdc, &rc, hBorder);
+                        DeleteObject(hBorder);
+
+                        wchar_t text[128] = {0};
+                        GetWindowTextW(pDrawItem->hwndItem, text, static_cast<int>(std::size(text)));
+
+                        SetBkMode(hdc, TRANSPARENT);
+                        SetTextColor(hdc, textColor);
+
+                        RECT textRc = rc;
+                        InflateRect(&textRc, -4, -2);
+                        DrawTextW(hdc, text, -1, &textRc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+                        if (focused)
+                        {
+                            RECT focusRc = rc;
+                            InflateRect(&focusRc, -3, -3);
+                            DrawFocusRect(hdc, &focusRc);
+                        }
+
+                        return TRUE;
+                    }
+                }
             }
             break;
         }
@@ -371,6 +511,64 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
         }
     }
 
+    // Populate theme mode combo
+    HWND hThemeMode = GetDlgItem(hDlg, IDC_THEME_MODE_COMBO);
+    if (hThemeMode)
+    {
+        struct ThemeOption
+        {
+            ThemeMode mode;
+            UINT resourceId;
+        };
+
+        const ThemeOption themes[] = {
+            {ThemeMode::SystemDefault, IDS_SETTINGS_THEME_SYSTEM},
+            {ThemeMode::Light,         IDS_SETTINGS_THEME_LIGHT},
+            {ThemeMode::Dark,          IDS_SETTINGS_THEME_DARK},
+        };
+
+        int selectedIndex = -1;
+        for (const auto& option : themes)
+        {
+            std::wstring label = LoadStringResource(option.resourceId);
+            if (label.empty())
+            {
+                switch (option.mode)
+                {
+                case ThemeMode::SystemDefault:
+                    label = L"System (Windows default)";
+                    break;
+                case ThemeMode::Light:
+                    label = L"Light";
+                    break;
+                case ThemeMode::Dark:
+                    label = L"Dark";
+                    break;
+                default:
+                    label = L"Unknown";
+                    break;
+                }
+            }
+
+            int index = static_cast<int>(SendMessageW(hThemeMode, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str())));
+            SendMessageW(hThemeMode, CB_SETITEMDATA, index, static_cast<WPARAM>(static_cast<int>(option.mode)));
+
+            if (m_configCopy.themeMode == option.mode)
+            {
+                selectedIndex = index;
+            }
+        }
+
+        if (selectedIndex >= 0)
+        {
+            SendMessageW(hThemeMode, CB_SETCURSEL, selectedIndex, 0);
+        }
+        else
+        {
+            SendMessageW(hThemeMode, CB_SETCURSEL, 0, 0);
+        }
+    }
+
     // Populate interface combo
     PopulateInterfaceCombo(hDlg);
 
@@ -378,6 +576,7 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
     Button_SetCheck(GetDlgItem(hDlg, IDC_AUTOSTART_CHECK), m_configCopy.autoStart ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(GetDlgItem(hDlg, IDC_ENABLE_LOGGING_CHECK), m_configCopy.enableLogging ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(GetDlgItem(hDlg, IDC_DEBUG_LOGGING_CHECK), m_configCopy.debugLogging ? BST_CHECKED : BST_UNCHECKED);
+    Button_SetCheck(GetDlgItem(hDlg, IDC_CONNECTION_NOTIFY_CHECK), m_configCopy.enableConnectionNotification ? BST_CHECKED : BST_UNCHECKED);
 
     // Populate history auto-trim combo
     HWND hTrim = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
@@ -433,6 +632,102 @@ void SettingsDialog::PopulateDialog(HWND hDlg)
             SendMessageW(hTrim, CB_SETCURSEL, 0, 0);
         }
     }
+
+    // Populate ping target edit
+    HWND hPingTarget = GetDlgItem(hDlg, IDC_PING_TARGET_EDIT);
+    if (hPingTarget)
+    {
+        SetWindowTextW(hPingTarget, m_configCopy.pingTarget.c_str());
+    }
+
+    // Populate ping interval combo
+    HWND hPingInterval = GetDlgItem(hDlg, IDC_PING_INTERVAL_COMBO);
+    if (hPingInterval)
+    {
+        struct IntervalOption { UINT ms; const wchar_t* label; };
+        const IntervalOption intervals[] = {
+            {3000,  L"3s"},
+            {5000,  L"5s"},
+            {10000, L"10s"},
+            {30000, L"30s"},
+        };
+
+        int selectedIndex = -1;
+        for (const auto& option : intervals)
+        {
+            int index = static_cast<int>(SendMessageW(hPingInterval, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(option.label)));
+            SendMessageW(hPingInterval, CB_SETITEMDATA, index, option.ms);
+            if (m_configCopy.pingIntervalMs == option.ms)
+            {
+                selectedIndex = index;
+            }
+        }
+        if (selectedIndex >= 0)
+        {
+            SendMessageW(hPingInterval, CB_SETCURSEL, selectedIndex, 0);
+        }
+        else
+        {
+            SendMessageW(hPingInterval, CB_SETCURSEL, 1, 0); // Default to 5s
+        }
+    }
+
+    // Populate hotkey combo
+    HWND hHotkey = GetDlgItem(hDlg, IDC_HOTKEY_COMBO);
+    if (hHotkey)
+    {
+        struct HotkeyOption { UINT modifier; UINT key; const wchar_t* label; };
+        const HotkeyOption hotkeys[] = {
+            {MOD_WIN | MOD_SHIFT, 'N', L"Win+Shift+N"},
+            {MOD_WIN | MOD_SHIFT, 'M', L"Win+Shift+M"},
+            {MOD_CONTROL | MOD_SHIFT, 'N', L"Ctrl+Shift+N"},
+            {MOD_CONTROL | MOD_ALT, 'N', L"Ctrl+Alt+N"},
+        };
+
+        int selectedIndex = -1;
+        for (const auto& option : hotkeys)
+        {
+            int index = static_cast<int>(SendMessageW(hHotkey, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(option.label)));
+            // Store both modifier and key in item data (modifier in high word, key in low word)
+            LPARAM data = MAKELPARAM(option.key, option.modifier);
+            SendMessageW(hHotkey, CB_SETITEMDATA, index, data);
+            if (m_configCopy.hotkeyModifier == option.modifier && m_configCopy.hotkeyKey == option.key)
+            {
+                selectedIndex = index;
+            }
+        }
+        if (selectedIndex >= 0)
+        {
+            SendMessageW(hHotkey, CB_SETCURSEL, selectedIndex, 0);
+        }
+        else
+        {
+            SendMessageW(hHotkey, CB_SETCURSEL, 0, 0); // Default to Win+Shift+N
+        }
+    }
+
+    // For dark theme, disable visual styles for comboboxes so our
+    // WM_CTLCOLOR* handlers can control background/text colors.
+    if (m_configCopy.darkTheme)
+    {
+        HWND hLangTheme   = GetDlgItem(hDlg, IDC_LANGUAGE_COMBO);
+        HWND hIntTheme    = GetDlgItem(hDlg, IDC_UPDATE_INTERVAL_COMBO);
+        HWND hUnitTheme   = GetDlgItem(hDlg, IDC_DISPLAY_UNIT_COMBO);
+        HWND hIfaceTheme  = GetDlgItem(hDlg, IDC_INTERFACE_COMBO);
+        HWND hTrimTheme   = GetDlgItem(hDlg, IDC_HISTORY_AUTO_TRIM_COMBO);
+        HWND hThemeModeCB = GetDlgItem(hDlg, IDC_THEME_MODE_COMBO);
+        HWND hPingIntTheme = GetDlgItem(hDlg, IDC_PING_INTERVAL_COMBO);
+        HWND hHotkeyTheme = GetDlgItem(hDlg, IDC_HOTKEY_COMBO);
+
+        if (hLangTheme)    SetWindowTheme(hLangTheme,   L"", L"");
+        if (hIntTheme)     SetWindowTheme(hIntTheme,    L"", L"");
+        if (hUnitTheme)    SetWindowTheme(hUnitTheme,   L"", L"");
+        if (hIfaceTheme)   SetWindowTheme(hIfaceTheme,  L"", L"");
+        if (hTrimTheme)    SetWindowTheme(hTrimTheme,   L"", L"");
+        if (hThemeModeCB)  SetWindowTheme(hThemeModeCB, L"", L"");
+        if (hPingIntTheme) SetWindowTheme(hPingIntTheme, L"", L"");
+        if (hHotkeyTheme)  SetWindowTheme(hHotkeyTheme, L"", L"");
+    }
 }
 
 bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
@@ -465,6 +760,31 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
     bool newAutoStart = (Button_GetCheck(GetDlgItem(hDlg, IDC_AUTOSTART_CHECK)) == BST_CHECKED);
     bool newEnableLogging = (Button_GetCheck(GetDlgItem(hDlg, IDC_ENABLE_LOGGING_CHECK)) == BST_CHECKED);
     bool newDebugLogging = (Button_GetCheck(GetDlgItem(hDlg, IDC_DEBUG_LOGGING_CHECK)) == BST_CHECKED);
+    bool newConnectionNotify = (Button_GetCheck(GetDlgItem(hDlg, IDC_CONNECTION_NOTIFY_CHECK)) == BST_CHECKED);
+    bool newDarkTheme = m_configCopy.darkTheme;
+
+    // Keep ThemeMode roughly in sync with the dark theme checkbox so that
+    // future logic based on ThemeMode can distinguish between explicit
+    // Light/Dark overrides (while SystemDefault remains the migrated value
+    // when the user has not changed the theme setting yet).
+    ThemeMode newThemeMode = m_configCopy.themeMode;
+    HWND hThemeModeDlg = GetDlgItem(hDlg, IDC_THEME_MODE_COMBO);
+    if (hThemeModeDlg)
+    {
+        int selTheme = static_cast<int>(SendMessageW(hThemeModeDlg, CB_GETCURSEL, 0, 0));
+        if (selTheme != CB_ERR)
+        {
+            LRESULT data = SendMessageW(hThemeModeDlg, CB_GETITEMDATA, selTheme, 0);
+            if (data != CB_ERR)
+            {
+                newThemeMode = static_cast<ThemeMode>(static_cast<int>(data));
+            }
+        }
+    }
+
+    AppConfig tempConfig = m_configCopy;
+    tempConfig.themeMode = newThemeMode;
+    newDarkTheme = IsDarkThemeEnabled(tempConfig);
 
     // Get interface selection
     std::wstring newInterface = m_configCopy.selectedInterface;
@@ -519,15 +839,70 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
         }
     }
 
+    // Get ping target
+    std::wstring newPingTarget = m_configCopy.pingTarget;
+    HWND hPingTarget = GetDlgItem(hDlg, IDC_PING_TARGET_EDIT);
+    if (hPingTarget)
+    {
+        wchar_t buffer[256] = {0};
+        GetWindowTextW(hPingTarget, buffer, 256);
+        newPingTarget = buffer;
+        if (newPingTarget.empty())
+        {
+            newPingTarget = L"8.8.8.8";
+        }
+    }
+
+    // Get ping interval
+    UINT newPingInterval = m_configCopy.pingIntervalMs;
+    HWND hPingInterval = GetDlgItem(hDlg, IDC_PING_INTERVAL_COMBO);
+    if (hPingInterval)
+    {
+        int sel = static_cast<int>(SendMessageW(hPingInterval, CB_GETCURSEL, 0, 0));
+        if (sel != CB_ERR)
+        {
+            LRESULT data = SendMessageW(hPingInterval, CB_GETITEMDATA, sel, 0);
+            if (data != CB_ERR)
+            {
+                newPingInterval = static_cast<UINT>(data);
+            }
+        }
+    }
+
+    // Get hotkey
+    UINT newHotkeyModifier = m_configCopy.hotkeyModifier;
+    UINT newHotkeyKey = m_configCopy.hotkeyKey;
+    HWND hHotkeyCombo = GetDlgItem(hDlg, IDC_HOTKEY_COMBO);
+    if (hHotkeyCombo)
+    {
+        int sel = static_cast<int>(SendMessageW(hHotkeyCombo, CB_GETCURSEL, 0, 0));
+        if (sel != CB_ERR)
+        {
+            LRESULT data = SendMessageW(hHotkeyCombo, CB_GETITEMDATA, sel, 0);
+            if (data != CB_ERR)
+            {
+                newHotkeyKey = LOWORD(data);
+                newHotkeyModifier = HIWORD(data);
+            }
+        }
+    }
+
     // Update working copy
     m_configCopy.updateInterval = newInterval;
     m_configCopy.displayUnit = newUnit;
     m_configCopy.autoStart = newAutoStart;
     m_configCopy.enableLogging = newEnableLogging;
     m_configCopy.debugLogging = newDebugLogging;
+    m_configCopy.enableConnectionNotification = newConnectionNotify;
+    m_configCopy.darkTheme = newDarkTheme;
+    m_configCopy.themeMode = newThemeMode;
     m_configCopy.selectedInterface = newInterface;
     m_configCopy.historyAutoTrimDays = newTrimDays;
     m_configCopy.language = newLanguage;
+    m_configCopy.pingTarget = newPingTarget;
+    m_configCopy.pingIntervalMs = newPingInterval;
+    m_configCopy.hotkeyModifier = newHotkeyModifier;
+    m_configCopy.hotkeyKey = newHotkeyKey;
 
     // Save to registry via ConfigManager (ignore errors for now, like main.cpp)
     if (m_pConfigManager)

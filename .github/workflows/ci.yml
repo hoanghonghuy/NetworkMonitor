@@ -2,22 +2,45 @@ name: CI
 
 on:
   push:
+    branches: [main, develop, feature/*]
   pull_request:
+    branches: [main, develop]
 
 jobs:
   build-and-test:
     runs-on: windows-latest
 
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure CMake (Debug, with tests)
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: ${{ runner.os }}-cmake-${{ matrix.build_type }}-${{ hashFiles('CMakeLists.txt', 'tests/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-${{ matrix.build_type }}-
+
+      - name: Configure CMake
         run: cmake -S . -B build -DBUILD_TESTS=ON
 
-      - name: Build
-        run: cmake --build build --config Debug
+      - name: Build (${{ matrix.build_type }})
+        run: cmake --build build --config ${{ matrix.build_type }}
 
       - name: Run tests
+        if: matrix.build_type == 'Debug'
         working-directory: build
         run: ctest -C Debug --output-on-failure
+
+      - name: Upload Release artifact
+        if: matrix.build_type == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetworkMonitor-${{ github.sha }}
+          path: build/Release/NetworkMonitor.exe
+          retention-days: 30

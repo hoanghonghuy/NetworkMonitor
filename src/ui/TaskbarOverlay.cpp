@@ -24,6 +24,8 @@ TaskbarOverlay::TaskbarOverlay()
     , m_downloadSpeed(0.0)
     , m_uploadSpeed(0.0)
     , m_displayUnit(SpeedUnit::KiloBytesPerSecond)
+    , m_darkTheme(false)
+    , m_pingLatency(-1)
     , m_memDC(nullptr)
     , m_memBitmap(nullptr)
     , m_oldBitmap(nullptr)
@@ -121,6 +123,16 @@ void TaskbarOverlay::Show(bool show)
     else
     {
         ShowWindow(m_hwnd, SW_HIDE);
+    }
+}
+
+void TaskbarOverlay::SetDarkTheme(bool dark)
+{
+    m_darkTheme = dark;
+
+    if (m_hwnd && m_isVisible)
+    {
+        InvalidateRect(m_hwnd, nullptr, TRUE);
     }
 }
 
@@ -487,15 +499,55 @@ void TaskbarOverlay::OnPaint()
     RECT line1Rect = {5, startY, rect.right - 5, startY + lineHeight};
     RECT line2Rect = {5, startY + lineHeight, rect.right - 5, startY + lineHeight * 2};
 
+    COLORREF downColor = m_darkTheme ? RGB(120, 255, 160) : RGB(50, 255, 100);
+    COLORREF upColor   = m_darkTheme ? RGB(255, 210, 120) : RGB(255, 180, 50);
+
     // Draw Download line - GREEN color
-    SetTextColor(hdcMem, RGB(50, 255, 100));
+    SetTextColor(hdcMem, downColor);
     DrawTextW(hdcMem, line1.c_str(), -1, &line1Rect,
               DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
     // Draw Upload line - ORANGE color
-    SetTextColor(hdcMem, RGB(255, 180, 50));
+    SetTextColor(hdcMem, upColor);
     DrawTextW(hdcMem, line2.c_str(), -1, &line2Rect,
               DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+
+    // Draw Ping latency on the right side
+    {
+        wchar_t pingBuffer[32];
+        COLORREF pingColor;
+
+        if (m_pingLatency < 0)
+        {
+            // Timeout or unavailable - show "---" in red
+            wcscpy_s(pingBuffer, L"---");
+            pingColor = m_darkTheme ? RGB(255, 100, 100) : RGB(220, 50, 50);
+        }
+        else if (m_pingLatency < 100)
+        {
+            // Good latency - green
+            swprintf_s(pingBuffer, L"%dms", m_pingLatency);
+            pingColor = m_darkTheme ? RGB(100, 255, 130) : RGB(50, 200, 80);
+        }
+        else if (m_pingLatency < 200)
+        {
+            // Medium latency - yellow/orange
+            swprintf_s(pingBuffer, L"%dms", m_pingLatency);
+            pingColor = m_darkTheme ? RGB(255, 220, 100) : RGB(230, 180, 50);
+        }
+        else
+        {
+            // High latency - red
+            swprintf_s(pingBuffer, L"%dms", m_pingLatency);
+            pingColor = m_darkTheme ? RGB(255, 100, 100) : RGB(220, 50, 50);
+        }
+
+        SetTextColor(hdcMem, pingColor);
+
+        RECT pingRect = {rect.right - 45, startY, rect.right - 2, startY + lineHeight * 2};
+        DrawTextW(hdcMem, pingBuffer, -1, &pingRect,
+                  DT_SINGLELINE | DT_RIGHT | DT_VCENTER);
+    }
 
     // Copy to screen
     BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
@@ -610,6 +662,19 @@ void TaskbarOverlay::OnRightButtonUp()
 void TaskbarOverlay::OnDisplayChange()
 {
     PositionOnTaskbar();
+}
+
+void TaskbarOverlay::SetPingLatency(int latencyMs)
+{
+    if (m_pingLatency != latencyMs)
+    {
+        m_pingLatency = latencyMs;
+        // Trigger repaint to update display
+        if (m_hwnd && m_isVisible)
+        {
+            InvalidateRect(m_hwnd, nullptr, FALSE);
+        }
+    }
 }
 
 } // namespace NetworkMonitor

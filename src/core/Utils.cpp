@@ -5,6 +5,8 @@
 // ============================================================================
 
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/ThemeHelper.h"
+#include "../../resources/resource.h"
 #include <sstream>
 #include <iomanip>
 #include <fstream>
@@ -245,10 +247,138 @@ std::wstring GetLastErrorString()
     return message;
 }
 
+namespace
+{
+    struct DarkMessageBoxData
+    {
+        const std::wstring* message;
+        const std::wstring* title;
+        UINT flags;
+        bool darkTheme;
+    };
+
+    INT_PTR CALLBACK DarkMessageDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+    {
+        DarkMessageBoxData* data = nullptr;
+
+        if (message == WM_INITDIALOG)
+        {
+            data = reinterpret_cast<DarkMessageBoxData*>(lParam);
+            SetWindowLongPtrW(hDlg, DWLP_USER, reinterpret_cast<LONG_PTR>(data));
+
+            if (data)
+            {
+                if (data->title)
+                {
+                    SetWindowTextW(hDlg, data->title->c_str());
+                }
+
+                if (data->message)
+                {
+                    SetDlgItemTextW(hDlg, IDC_MESSAGE_TEXT, data->message->c_str());
+                }
+
+                if (data->darkTheme)
+                {
+                    ThemeHelper::ApplyDarkTitleBar(hDlg, true);
+                }
+
+                UINT type = (data->flags & MB_TYPEMASK);
+                if (type == MB_OK)
+                {
+                    ShowWindow(GetDlgItem(hDlg, IDYES), SW_HIDE);
+                    ShowWindow(GetDlgItem(hDlg, IDNO), SW_HIDE);
+                }
+                else if (type == MB_YESNO)
+                {
+                    ShowWindow(GetDlgItem(hDlg, IDOK), SW_HIDE);
+                }
+            }
+
+            return TRUE;
+        }
+
+        data = reinterpret_cast<DarkMessageBoxData*>(GetWindowLongPtrW(hDlg, DWLP_USER));
+
+        switch (message)
+        {
+        case WM_CTLCOLORDLG:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORBTN:
+            if (data && data->darkTheme)
+            {
+                HDC hdc = reinterpret_cast<HDC>(wParam);
+                static HBRUSH s_darkBrush = nullptr;
+                if (!s_darkBrush)
+                {
+                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
+                }
+
+                SetTextColor(hdc, RGB(230, 230, 230));
+                SetBkMode(hdc, TRANSPARENT);
+
+                return reinterpret_cast<INT_PTR>(s_darkBrush);
+            }
+            break;
+
+        case WM_COMMAND:
+            switch (LOWORD(wParam))
+            {
+            case IDOK:
+            case IDYES:
+            case IDNO:
+            case IDCANCEL:
+                EndDialog(hDlg, LOWORD(wParam));
+                return TRUE;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+
+        return FALSE;
+    }
+}
+
+int ShowDarkMessageBox(HWND owner,
+                       const std::wstring& message,
+                       const std::wstring& title,
+                       UINT flags,
+                       bool darkTheme)
+{
+    if (!darkTheme)
+    {
+        return static_cast<int>(MessageBoxW(owner, message.c_str(), title.c_str(), flags));
+    }
+
+    DarkMessageBoxData data;
+    data.message = &message;
+    data.title = &title;
+    data.flags = flags;
+    data.darkTheme = true;
+
+    INT_PTR result = DialogBoxParamW(
+        GetModuleHandleW(nullptr),
+        MAKEINTRESOURCEW(IDD_MESSAGE_DIALOG),
+        owner,
+        DarkMessageDialogProc,
+        reinterpret_cast<LPARAM>(&data));
+
+    if (result == -1)
+    {
+        return static_cast<int>(MessageBoxW(owner, message.c_str(), title.c_str(), flags));
+    }
+
+    return static_cast<int>(result);
+}
+
 void ShowErrorMessage(const std::wstring& message, const std::wstring& title)
 {
     LogError(title + L": " + message);
-    MessageBoxW(nullptr, message.c_str(), title.c_str(), MB_OK | MB_ICONERROR);
+    bool dark = ThemeHelper::IsSystemInDarkMode();
+    ShowDarkMessageBox(nullptr, message, title, MB_OK | MB_ICONERROR, dark);
 }
 
 namespace
@@ -377,6 +507,22 @@ void CenterWindowOnScreen(HWND hWnd)
     int posY = (screenHeight - dlgHeight) / 2;
 
     SetWindowPos(hWnd, nullptr, posX, posY, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+}
+
+bool IsDarkThemeEnabled(const AppConfig& config)
+{
+    switch (config.themeMode)
+    {
+    case ThemeMode::Light:
+        return false;
+
+    case ThemeMode::Dark:
+        return true;
+
+    case ThemeMode::SystemDefault:
+    default:
+        return ThemeHelper::IsSystemInDarkMode();
+    }
 }
 
 } // namespace NetworkMonitor

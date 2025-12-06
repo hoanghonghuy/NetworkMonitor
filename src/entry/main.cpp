@@ -40,7 +40,7 @@ int WINAPI WinMain(
         {
             msg = L"NetworkMonitor is already running!";
         }
-        MessageBoxW(nullptr, msg.c_str(), title.c_str(), MB_OK | MB_ICONINFORMATION);
+        NetworkMonitor::ShowDarkMessageBox(nullptr, msg, title, MB_OK | MB_ICONINFORMATION, true);
         return 0;
     }
 

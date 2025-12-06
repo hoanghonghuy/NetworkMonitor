@@ -9,8 +9,13 @@ build/
 *.user
 *.suo
 *.aps
+enc_temp_folder/
 
 # Temporary files
 *.log
 *.tmp
 UpgradeLog*.htm
+
+# Local docs (not tracked)
+docs/
+notes/

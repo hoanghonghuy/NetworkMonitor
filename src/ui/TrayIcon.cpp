@@ -6,6 +6,7 @@
 
 #include "NetworkMonitor/TrayIcon.h"
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/ThemeHelper.h"
 #include "../../resources/resource.h"
 
 namespace NetworkMonitor
@@ -17,6 +18,9 @@ TrayIcon::TrayIcon()
     , m_iconIdle(nullptr)
     , m_iconActive(nullptr)
     , m_iconHigh(nullptr)
+    , m_iconIdleDark(nullptr)
+    , m_iconActiveDark(nullptr)
+    , m_iconHighDark(nullptr)
     , m_configRef(nullptr)
     , m_overlayVisibleProvider(nullptr)
 {
@@ -69,6 +73,43 @@ bool TrayIcon::Initialize(HWND hwnd)
         m_iconHigh = m_iconIdle;
     }
 
+    // Optional dark-theme icons (fallback to normal icons if not present)
+    m_iconIdleDark = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_IDLE_DARK),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+    if (!m_iconIdleDark)
+    {
+        m_iconIdleDark = m_iconIdle;
+    }
+
+    m_iconActiveDark = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_ACTIVE_DARK),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+    if (!m_iconActiveDark)
+    {
+        m_iconActiveDark = m_iconActive;
+    }
+
+    m_iconHighDark = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_TRAY_HIGH_DARK),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR));
+    if (!m_iconHighDark)
+    {
+        m_iconHighDark = m_iconHigh;
+    }
+
     if (m_iconIdle == nullptr)
     {
         ShowErrorMessage(LoadStringResource(IDS_ERR_LOAD_APP_ICON));
@@ -81,7 +122,18 @@ bool TrayIcon::Initialize(HWND hwnd)
     m_notifyIconData.uID = ID_TRAY_ICON;
     m_notifyIconData.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     m_notifyIconData.uCallbackMessage = WM_TRAYICON;
-    m_notifyIconData.hIcon = m_iconIdle;
+
+    bool useDark = false;
+    if (m_configRef)
+    {
+        useDark = m_configRef->darkTheme;
+    }
+    else
+    {
+        useDark = ThemeHelper::IsSystemInDarkMode();
+    }
+
+    m_notifyIconData.hIcon = useDark ? m_iconIdleDark : m_iconIdle;
     wcscpy_s(m_notifyIconData.szTip, APP_NAME);
 
     // Add tray icon
@@ -108,7 +160,7 @@ void TrayIcon::Cleanup()
         m_initialized = false;
     }
 
-    // Cleanup icons
+    // Cleanup light theme icons
     if (m_iconIdle)
     {
         DestroyIcon(m_iconIdle);
@@ -123,6 +175,23 @@ void TrayIcon::Cleanup()
     {
         DestroyIcon(m_iconHigh);
         m_iconHigh = nullptr;
+    }
+
+    // Cleanup dark theme icons (only if they are distinct from light icons)
+    if (m_iconIdleDark && m_iconIdleDark != m_iconIdle)
+    {
+        DestroyIcon(m_iconIdleDark);
+        m_iconIdleDark = nullptr;
+    }
+    if (m_iconActiveDark && m_iconActiveDark != m_iconActive && m_iconActiveDark != m_iconIdle)
+    {
+        DestroyIcon(m_iconActiveDark);
+        m_iconActiveDark = nullptr;
+    }
+    if (m_iconHighDark && m_iconHighDark != m_iconHigh && m_iconHighDark != m_iconIdle)
+    {
+        DestroyIcon(m_iconHighDark);
+        m_iconHighDark = nullptr;
     }
 }
 
@@ -156,20 +225,31 @@ void TrayIcon::UpdateIcon(double downloadSpeed, double uploadSpeed)
         return;
     }
 
+    // Determine if we should use dark theme icons
+    bool useDark = false;
+    if (m_configRef)
+    {
+        useDark = m_configRef->darkTheme;
+    }
+    else
+    {
+        useDark = ThemeHelper::IsSystemInDarkMode();
+    }
+
     // Determine which icon to use based on traffic
     const double HIGH_THRESHOLD = 1024.0 * 1024.0;  // 1 MB/s
     const double ACTIVE_THRESHOLD = 10.0 * 1024.0;  // 10 KB/s
 
-    HICON newIcon = m_iconIdle;
+    HICON newIcon = useDark ? m_iconIdleDark : m_iconIdle;
     double totalSpeed = downloadSpeed + uploadSpeed;
 
     if (totalSpeed > HIGH_THRESHOLD)
     {
-        newIcon = m_iconHigh;
+        newIcon = useDark ? m_iconHighDark : m_iconHigh;
     }
     else if (totalSpeed > ACTIVE_THRESHOLD)
     {
-        newIcon = m_iconActive;
+        newIcon = useDark ? m_iconActiveDark : m_iconActive;
     }
 
     // Update icon if changed
@@ -236,6 +316,12 @@ void TrayIcon::ShowContextMenu()
     {
         configPtr = &tempConfig;
     }
+
+    // Ensure the process-level dark mode preference matches the current
+    // system app theme so that the tray context menu follows Windows
+    // dark/light instead of the app-specific theme setting.
+    bool systemDarkForMenu = ThemeHelper::IsSystemInDarkMode();
+    ThemeHelper::AllowDarkModeForApp(systemDarkForMenu);
 
     bool overlayVisible = false;
     if (m_overlayVisibleProvider)
@@ -371,6 +457,26 @@ HICON TrayIcon::LoadAppIcon()
     }
 
     return hIcon;
+}
+
+void TrayIcon::ShowBalloonNotification(const std::wstring& title, const std::wstring& message)
+{
+    if (!m_initialized)
+    {
+        return;
+    }
+
+    m_notifyIconData.uFlags = NIF_INFO;
+    m_notifyIconData.dwInfoFlags = NIIF_INFO;
+
+    wcsncpy_s(m_notifyIconData.szInfoTitle, title.c_str(), _TRUNCATE);
+    wcsncpy_s(m_notifyIconData.szInfo, message.c_str(), _TRUNCATE);
+
+    Shell_NotifyIconW(NIM_MODIFY, &m_notifyIconData);
+
+    // Clear the balloon after showing
+    m_notifyIconData.szInfoTitle[0] = L'\0';
+    m_notifyIconData.szInfo[0] = L'\0';
 }
 
 } // namespace NetworkMonitor

@@ -70,6 +70,12 @@ private:
                             unsigned long long down,
                             unsigned long long up);
 
+    bool ComputeStartOfToday(std::time_t& startOut);
+    void LogRecentSamplesDebug(int limit,
+                               bool onlyToday,
+                               const std::wstring* interfaceFilter,
+                               const std::vector<HistorySample>& samples);
+
     bool m_initialized;
     bool m_sqliteAvailable;
 

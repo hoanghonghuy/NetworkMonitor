@@ -64,6 +64,8 @@ set(HEADER_FILES
     include/NetworkMonitor/ConfigManager.h
     include/NetworkMonitor/TrayIcon.h
     include/NetworkMonitor/TaskbarOverlay.h
+    include/NetworkMonitor/ThemeHelper.h
+    include/NetworkMonitor/PingMonitor.h
     include/NetworkMonitor/HistoryLogger.h
     include/NetworkMonitor/Application.h
     include/NetworkMonitor/SettingsDialog.h
@@ -82,8 +84,10 @@ set(SOURCE_FILES
     src/core/NetworkCalculator.cpp
     src/core/NetworkMonitor.cpp
     src/core/ConfigManager.cpp
+    src/core/PingMonitor.cpp
     src/ui/TrayIcon.cpp
     src/ui/TaskbarOverlay.cpp
+    src/ui/ThemeHelper.cpp
     src/core/HistoryLogger.cpp
     third_party/sqlite/sqlite3.c
 )

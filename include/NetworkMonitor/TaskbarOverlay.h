@@ -60,6 +60,13 @@ public:
      */
     void SetRightClickCallback(std::function<void()> callback);
 
+    void SetDarkTheme(bool dark);
+
+    /**
+     * Set ping latency to display (-1 for unavailable)
+     */
+    void SetPingLatency(int latencyMs);
+
 private:
     /**
      * Register window class
@@ -115,8 +122,8 @@ private:
 
 private:
     static constexpr const wchar_t* WINDOW_CLASS_NAME = L"NetworkMonitorTaskbarOverlay";
-    // Extra width so strings like "99999.99 KB/s" remain fully visible
-    static constexpr int WINDOW_WIDTH = 110;
+    // Extra width to accommodate speed text + ping latency
+    static constexpr int WINDOW_WIDTH = 150;
     static constexpr int WINDOW_HEIGHT = 36;
     static constexpr int TASKBAR_MARGIN = 5;
     static constexpr UINT TIMER_CHECK_VISIBILITY = 1001;
@@ -133,6 +140,8 @@ private:
     double m_downloadSpeed;                     // Current download speed
     double m_uploadSpeed;                       // Current upload speed
     SpeedUnit m_displayUnit;                    // Display unit
+    bool m_darkTheme;
+    int m_pingLatency;                          // Ping latency in ms (-1 = unavailable)
 
     // Callback
     std::function<void()> m_rightClickCallback; // Right-click callback

@@ -17,6 +17,12 @@
 #define IDI_TRAY_ACTIVE                 103
 #define IDI_TRAY_HIGH                   104
 
+// Optional dark-variant icons (fallback to normal icons if resources not present)
+#define IDI_APP_ICON_DARK               105
+#define IDI_TRAY_IDLE_DARK              106
+#define IDI_TRAY_ACTIVE_DARK            107
+#define IDI_TRAY_HIGH_DARK              108
+
 // ============================================================================
 // MENU RESOURCES
 // ============================================================================
@@ -46,6 +52,7 @@
 #define IDD_SETTINGS_DIALOG             302
 #define IDD_DASHBOARD_DIALOG            303
 #define IDD_HISTORY_MANAGE_DIALOG       304
+#define IDD_MESSAGE_DIALOG              305
 
 // ============================================================================
 // STRING RESOURCES
@@ -114,8 +121,6 @@
 #define IDS_SETTINGS_LABEL_SPEED_UNIT   461
 #define IDS_SETTINGS_LABEL_MONITOR      462
 #define IDS_SETTINGS_LABEL_AUTOTRIM     463
-#define IDS_SETTINGS_LABEL_DEBUGLOGGING  474
-#define IDS_SETTINGS_BUTTON_OPEN_LOG    475
 #define IDS_DASHBOARD_TITLE             464
 #define IDS_DASHBOARD_LABEL_TODAY       465
 #define IDS_DASHBOARD_LABEL_THIS_MONTH  466
@@ -126,6 +131,18 @@
 #define IDS_HISTORY_BUTTON_DELETE_ALL   471
 #define IDS_HISTORY_BUTTON_KEEP_30      472
 #define IDS_HISTORY_BUTTON_KEEP_90      473
+#define IDS_SETTINGS_LABEL_DEBUGLOGGING 474
+#define IDS_SETTINGS_BUTTON_OPEN_LOG    475
+#define IDS_DASHBOARD_BUTTON_EXPORT_CSV 476
+#define IDS_SETTINGS_LABEL_DARK_THEME   477
+#define IDS_SETTINGS_THEME_SYSTEM       478
+#define IDS_SETTINGS_THEME_LIGHT        479
+#define IDS_SETTINGS_THEME_DARK         480
+#define IDS_NOTIFICATION_DISCONNECTED_TITLE 481
+#define IDS_NOTIFICATION_DISCONNECTED_MSG   482
+#define IDS_NOTIFICATION_CONNECTED_TITLE    483
+#define IDS_NOTIFICATION_CONNECTED_MSG      484
+#define IDS_SETTINGS_LABEL_CONNECTION_NOTIFY 485
 
 // ============================================================================
 // CONTROL IDS (for dialogs)
@@ -169,6 +186,17 @@
 #define IDC_HISTORY_LABEL_OPERATIONS    535
 #define IDC_DEBUG_LOGGING_CHECK         536
 #define IDC_SETTINGS_BUTTON_OPEN_LOG    537
+#define IDC_DASHBOARD_BUTTON_EXPORT     538
+#define IDC_DARK_THEME_CHECK            539
+#define IDC_MESSAGE_ICON                540
+#define IDC_MESSAGE_TEXT                541
+#define IDC_SETTINGS_LABEL_THEME        542
+#define IDC_THEME_MODE_COMBO            543
+#define IDC_CONNECTION_NOTIFY_CHECK     544
+#define IDC_SETTINGS_GROUP_ADVANCED     545
+#define IDC_PING_TARGET_EDIT            546
+#define IDC_PING_INTERVAL_COMBO         547
+#define IDC_HOTKEY_COMBO                548
 
 // ============================================================================
 // STANDARD DIALOG IDS
