@@ -8,41 +8,42 @@
 #define NETWORK_MONITOR_CONFIGMANAGER_H
 
 #include "NetworkMonitor/Common.h"
+#include "NetworkMonitor/Interfaces/IConfigProvider.h"
 #include <windows.h>
 
 namespace NetworkMonitor {
 
-class ConfigManager {
+class ConfigManager : public IConfigProvider {
 public:
   ConfigManager();
-  ~ConfigManager();
+  ~ConfigManager() override;
 
   /**
    * Load configuration from registry
    * @param config Output configuration
    * @return true if successful, false otherwise
    */
-  bool LoadConfig(AppConfig &config);
+  bool LoadConfig(AppConfig &config) override;
 
   /**
    * Save configuration to registry
    * @param config Configuration to save
    * @return true if successful, false otherwise
    */
-  bool SaveConfig(const AppConfig &config);
+  bool SaveConfig(const AppConfig &config) override;
 
   /**
    * Enable/disable auto-start with Windows
    * @param enable true to enable, false to disable
    * @return true if successful, false otherwise
    */
-  bool SetAutoStart(bool enable);
+  bool SetAutoStart(bool enable) override;
 
   /**
    * Check if auto-start is enabled
    * @return true if enabled, false otherwise
    */
-  bool IsAutoStartEnabled();
+  bool IsAutoStartEnabled() override;
 
 private:
   /**

@@ -8,6 +8,7 @@
 #define NETWORK_MONITOR_PING_MONITOR_H
 
 #include "NetworkMonitor/Common.h"
+#include "NetworkMonitor/Interfaces/IPingProvider.h"
 #include <winsock2.h>
 #include <iphlpapi.h>
 #include <icmpapi.h>
@@ -18,27 +19,27 @@
 namespace NetworkMonitor
 {
 
-class PingMonitor
+class PingMonitor : public IPingProvider
 {
 public:
     PingMonitor();
-    ~PingMonitor();
+    ~PingMonitor() override;
 
     // Initialize with target IP/domain (default: 8.8.8.8)
     bool Initialize(const std::wstring& target = L"8.8.8.8");
     void Cleanup();
 
     // Perform ping and update latency (call from timer)
-    void Update();
+    void Update() override;
 
     // Get last measured latency in milliseconds (-1 if failed/timeout)
-    int GetLatency() const { return m_latency; }
+    int GetLatency() const override { return m_latency; }
 
     // Check if ping is available
-    bool IsAvailable() const { return m_initialized; }
+    bool IsAvailable() const override { return m_initialized; }
 
     // Set new target (will resolve on next Update)
-    void SetTarget(const std::wstring& target);
+    void SetTarget(const std::wstring& target) override;
 
 private:
     HANDLE m_hIcmp;

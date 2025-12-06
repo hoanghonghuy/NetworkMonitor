@@ -159,8 +159,11 @@ bool Application::Initialize(HINSTANCE hInstance)
         SetTimer(m_hwnd, TIMER_PING, m_config.pingIntervalMs, nullptr);
     }
 
-    // Register hotkeys
-    RegisterHotkeys();
+    // Create and initialize hotkey manager
+    m_pHotkeyManager = std::make_unique<HotkeyManager>();
+    m_pHotkeyManager->Initialize(m_hwnd);
+    m_pHotkeyManager->SetCallback([this](int id) { OnHotkey(id); });
+    SetupHotkeys();
 
     m_initialized = true;
     LogDebug(L"Application::Initialize: succeeded");
@@ -194,8 +197,8 @@ void Application::Cleanup()
 
     LogDebug(L"Application::Cleanup: starting");
 
-    // Unregister hotkeys
-    UnregisterHotkeys();
+    // Cleanup hotkey manager (auto-unregisters all hotkeys)
+    m_pHotkeyManager.reset();
 
     // Stop ping monitor
     if (m_pPingMonitor)
@@ -645,7 +648,10 @@ LRESULT CALLBACK Application::InstanceWindowProc(HWND hwnd, UINT message, WPARAM
 
         case WM_HOTKEY:
         {
-            OnHotkey(static_cast<int>(wParam));
+            if (m_pHotkeyManager)
+            {
+                m_pHotkeyManager->OnHotkey(static_cast<int>(wParam));
+            }
             return 0;
         }
 
@@ -731,34 +737,17 @@ void Application::CenterDialogOnScreen(HWND hDlg)
     CenterWindowOnScreen(hDlg);
 }
 
-void Application::RegisterHotkeys()
+void Application::SetupHotkeys()
 {
-    if (!m_hwnd)
+    if (!m_pHotkeyManager)
     {
         return;
     }
 
     // Register configurable hotkey to toggle overlay
-    UINT modifiers = m_config.hotkeyModifier | MOD_NOREPEAT;
-    if (!RegisterHotKey(m_hwnd, HOTKEY_TOGGLE_OVERLAY, modifiers, m_config.hotkeyKey))
-    {
-        LogDebug(L"Application::RegisterHotkeys: Failed to register hotkey");
-    }
-    else
-    {
-        LogDebug(L"Application::RegisterHotkeys: Registered hotkey");
-    }
-}
-
-void Application::UnregisterHotkeys()
-{
-    if (!m_hwnd)
-    {
-        return;
-    }
-
-    UnregisterHotKey(m_hwnd, HOTKEY_TOGGLE_OVERLAY);
-    LogDebug(L"Application::UnregisterHotkeys: Unregistered hotkeys");
+    m_pHotkeyManager->RegisterHotkey(HOTKEY_TOGGLE_OVERLAY, 
+                                     m_config.hotkeyModifier, 
+                                     m_config.hotkeyKey);
 }
 
 void Application::OnHotkey(int hotkeyId)

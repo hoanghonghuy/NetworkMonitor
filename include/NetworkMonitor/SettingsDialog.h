@@ -13,8 +13,9 @@
 namespace NetworkMonitor
 {
 
-class ConfigManager;
-class NetworkMonitorClass;
+// Forward declarations - use interfaces for DIP
+class IConfigProvider;
+class INetworkStatsProvider;
 
 class SettingsDialog
 {
@@ -23,7 +24,7 @@ public:
     ~SettingsDialog();
 
     // Show the settings dialog modally. Returns IDOK, IDCANCEL, or IDAPPLY_REOPEN
-    INT_PTR Show(HWND parentWindow, ConfigManager* configManager, NetworkMonitorClass* networkMonitor);
+    INT_PTR Show(HWND parentWindow, IConfigProvider* configProvider, INetworkStatsProvider* statsProvider);
 
     // Set callback for when settings are applied
     void SetSettingsChangedCallback(std::function<void()> callback);
@@ -43,8 +44,8 @@ private:
 
     // Member variables
     HWND m_hDialog;
-    ConfigManager* m_pConfigManager;
-    NetworkMonitorClass* m_pNetworkMonitor;
+    IConfigProvider* m_pConfigProvider;
+    INetworkStatsProvider* m_pStatsProvider;
     AppConfig m_configCopy;  // Working copy of config
     std::function<void()> m_settingsChangedCallback;
     bool m_isInitializing;   // Prevent recursive updates during initialization

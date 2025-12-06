@@ -5,8 +5,9 @@
 // ============================================================================
 
 #include "NetworkMonitor/SettingsDialog.h"
-#include "NetworkMonitor/ConfigManager.h"
-#include "NetworkMonitor/NetworkMonitor.h"
+#include "NetworkMonitor/Interfaces/IConfigProvider.h"
+#include "NetworkMonitor/Interfaces/INetworkStatsProvider.h"
+#include "NetworkMonitor/DialogThemeHelper.h"
 #include "NetworkMonitor/Utils.h"
 #include "NetworkMonitor/ThemeHelper.h"
 #include "../../../resources/resource.h"
@@ -27,7 +28,7 @@ static LRESULT CALLBACK DarkTabProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
         HDC hdc = reinterpret_cast<HDC>(wParam);
         RECT rc;
         GetClientRect(hwnd, &rc);
-        HBRUSH hBrush = CreateSolidBrush(RGB(32, 32, 32));
+        HBRUSH hBrush = CreateSolidBrush(DialogThemeHelper::DARK_BACKGROUND);
         FillRect(hdc, &rc, hBrush);
         DeleteObject(hBrush);
         return TRUE;
@@ -47,8 +48,8 @@ static const int s_overlayColorPresetCount = 4;
 
 SettingsDialog::SettingsDialog()
     : m_hDialog(nullptr)
-    , m_pConfigManager(nullptr)
-    , m_pNetworkMonitor(nullptr)
+    , m_pConfigProvider(nullptr)
+    , m_pStatsProvider(nullptr)
     , m_isInitializing(false)
 {
 }
@@ -57,19 +58,19 @@ SettingsDialog::~SettingsDialog()
 {
 }
 
-INT_PTR SettingsDialog::Show(HWND parentWindow, ConfigManager* configManager, NetworkMonitorClass* networkMonitor)
+INT_PTR SettingsDialog::Show(HWND parentWindow, IConfigProvider* configProvider, INetworkStatsProvider* statsProvider)
 {
-    if (!configManager)
+    if (!configProvider)
     {
         return IDCANCEL;
     }
 
-    m_pConfigManager = configManager;
-    m_pNetworkMonitor = networkMonitor;
+    m_pConfigProvider = configProvider;
+    m_pStatsProvider = statsProvider;
     m_isInitializing = true;
 
     // Load current config into working copy
-    if (!m_pConfigManager->LoadConfig(m_configCopy))
+    if (!m_pConfigProvider->LoadConfig(m_configCopy))
     {
         m_configCopy = AppConfig(); // Use defaults if load fails
     }
@@ -343,7 +344,7 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                     case CDDS_PREERASE:
                     {
                         // Fill entire tab control area with dark background
-                        HBRUSH hBrush = CreateSolidBrush(RGB(32, 32, 32));
+                        HBRUSH hBrush = CreateSolidBrush(DialogThemeHelper::DARK_BACKGROUND);
                         FillRect(pNMCD->hdc, &pNMCD->rc, hBrush);
                         DeleteObject(hBrush);
                         return CDRF_SKIPDEFAULT;
@@ -360,7 +361,7 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 HDC hdc = reinterpret_cast<HDC>(wParam);
                 RECT rc;
                 GetClientRect(hDlg, &rc);
-                HBRUSH hBrush = CreateSolidBrush(RGB(32, 32, 32));
+                HBRUSH hBrush = CreateSolidBrush(DialogThemeHelper::DARK_BACKGROUND);
                 FillRect(hdc, &rc, hBrush);
                 DeleteObject(hBrush);
                 return TRUE;
@@ -377,11 +378,7 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
             if (m_configCopy.darkTheme)
             {
                 HDC hdc = reinterpret_cast<HDC>(wParam);
-                static HBRUSH s_darkBrush = nullptr;
-                if (!s_darkBrush)
-                {
-                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
-                }
+                HBRUSH darkBrush = DialogThemeHelper::GetDarkBackgroundBrush();
 
                 HWND hwndCtl = reinterpret_cast<HWND>(lParam);
                 int ctrlId = GetDlgCtrlID(hwndCtl);
@@ -397,18 +394,18 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                 if (message == WM_CTLCOLORLISTBOX || message == WM_CTLCOLOREDIT || isComboArea)
                 {
                     // For combobox edit/dropdown areas: fill opaque dark background
-                    SetTextColor(hdc, RGB(230, 230, 230));
-                    SetBkColor(hdc, RGB(32, 32, 32));
+                    SetTextColor(hdc, DialogThemeHelper::DARK_TEXT);
+                    SetBkColor(hdc, DialogThemeHelper::DARK_BACKGROUND);
                     SetBkMode(hdc, OPAQUE);
                 }
                 else
                 {
                     // For labels, group boxes, buttons: transparent over dark dialog
-                    SetTextColor(hdc, RGB(230, 230, 230));
+                    SetTextColor(hdc, DialogThemeHelper::DARK_TEXT);
                     SetBkMode(hdc, TRANSPARENT);
                 }
 
-                return reinterpret_cast<INT_PTR>(s_darkBrush);
+                return reinterpret_cast<INT_PTR>(darkBrush);
             }
             break;
         }
@@ -432,7 +429,7 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
 
                         COLORREF backColor = pressed ? RGB(50, 50, 50) : RGB(40, 40, 40);
                         COLORREF borderColor = RGB(90, 90, 90);
-                        COLORREF textColor = disabled ? RGB(160, 160, 160) : RGB(230, 230, 230);
+                        COLORREF textColor = disabled ? RGB(160, 160, 160) : DialogThemeHelper::DARK_TEXT;
 
                         HBRUSH hBrush = CreateSolidBrush(backColor);
                         FillRect(hdc, &rc, hBrush);
@@ -472,8 +469,8 @@ INT_PTR CALLBACK SettingsDialog::InstanceDialogProc(HWND hDlg, UINT message, WPA
                     bool selected = (pDrawItem->itemState & ODS_SELECTED) != 0;
 
                     // Dark background for tab
-                    COLORREF backColor = selected ? RGB(50, 50, 50) : RGB(32, 32, 32);
-                    COLORREF textColor = RGB(230, 230, 230);
+                    COLORREF backColor = selected ? DialogThemeHelper::DARK_BACKGROUND_SELECTED : DialogThemeHelper::DARK_BACKGROUND;
+                    COLORREF textColor = DialogThemeHelper::DARK_TEXT;
 
                     HBRUSH hBrush = CreateSolidBrush(backColor);
                     FillRect(hdc, &rc, hBrush);
@@ -1124,10 +1121,10 @@ bool SettingsDialog::ApplySettingsFromDialog(HWND hDlg)
         }
     }
 
-    // Save to registry via ConfigManager (ignore errors for now, like main.cpp)
-    if (m_pConfigManager)
+    // Save to registry via config provider (ignore errors for now)
+    if (m_pConfigProvider)
     {
-        m_pConfigManager->SaveConfig(m_configCopy);
+        m_pConfigProvider->SaveConfig(m_configCopy);
     }
 
     return true;
@@ -1158,9 +1155,9 @@ void SettingsDialog::PopulateInterfaceCombo(HWND hDlg)
 
     // TODO: When NetworkMonitorClass is available here, enumerate real interfaces.
     // For now, add the currently selected interface (if any) so the user sees it.
-    if (m_pNetworkMonitor)
+    if (m_pStatsProvider)
     {
-        std::vector<NetworkStats> statsList = m_pNetworkMonitor->GetAllStats();
+        std::vector<NetworkStats> statsList = m_pStatsProvider->GetAllStats();
         int selectedIdx = -1;
 
         for (const auto& stats : statsList)

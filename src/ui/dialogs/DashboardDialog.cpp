@@ -8,6 +8,7 @@
 #include "NetworkMonitor/NetworkMonitor.h"
 #include "NetworkMonitor/HistoryLogger.h"
 #include "NetworkMonitor/HistoryDialog.h"
+#include "NetworkMonitor/DialogThemeHelper.h"
 #include "NetworkMonitor/Utils.h"
 #include "NetworkMonitor/ThemeHelper.h"
 #include "../../../resources/resource.h"
@@ -195,7 +196,7 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
                 {
                     ListView_SetBkColor(hList, RGB(24, 24, 24));
                     ListView_SetTextBkColor(hList, RGB(24, 24, 24));
-                    ListView_SetTextColor(hList, RGB(230, 230, 230));
+                    ListView_SetTextColor(hList, DialogThemeHelper::DARK_TEXT);
 
                     // Disable visual styles on the list itself.
                     SetWindowTheme(hList, L"", L"");
@@ -302,16 +303,12 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
             if (m_pConfig && m_pConfig->darkTheme)
             {
                 HDC hdc = reinterpret_cast<HDC>(wParam);
-                static HBRUSH s_darkBrush = nullptr;
-                if (!s_darkBrush)
-                {
-                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
-                }
+                HBRUSH darkBrush = DialogThemeHelper::GetDarkBackgroundBrush();
 
-                SetTextColor(hdc, RGB(230, 230, 230));
+                SetTextColor(hdc, DialogThemeHelper::DARK_TEXT);
                 SetBkMode(hdc, TRANSPARENT);
 
-                return reinterpret_cast<INT_PTR>(s_darkBrush);
+                return reinterpret_cast<INT_PTR>(darkBrush);
             }
             break;
         }
@@ -344,7 +341,7 @@ INT_PTR CALLBACK DashboardDialog::InstanceDialogProc(HWND hDlg, UINT message, WP
 
                     COLORREF backColor = pressed ? RGB(50, 50, 50) : RGB(40, 40, 40);
                     COLORREF borderColor = RGB(90, 90, 90);
-                    COLORREF textColor = disabled ? RGB(160, 160, 160) : RGB(230, 230, 230);
+                    COLORREF textColor = disabled ? RGB(160, 160, 160) : DialogThemeHelper::DARK_TEXT;
 
                     // Fill background
                     HBRUSH hBrush = CreateSolidBrush(backColor);
@@ -665,7 +662,7 @@ LRESULT CALLBACK DashboardDialog::HeaderWndProc(HWND hwnd, UINT msg, WPARAM wPar
         GetClientRect(hwnd, &rcClient);
 
         // Fill entire header background dark
-        HBRUSH hBack = CreateSolidBrush(RGB(32, 32, 32));
+        HBRUSH hBack = CreateSolidBrush(DialogThemeHelper::DARK_BACKGROUND);
         FillRect(hdc, &rcClient, hBack);
         DeleteObject(hBack);
 
@@ -692,7 +689,7 @@ LRESULT CALLBACK DashboardDialog::HeaderWndProc(HWND hwnd, UINT msg, WPARAM wPar
             }
 
             SetBkMode(hdc, TRANSPARENT);
-            SetTextColor(hdc, RGB(230, 230, 230));
+            SetTextColor(hdc, DialogThemeHelper::DARK_TEXT);
 
             RECT rcText = rcItem;
             rcText.left += 4;

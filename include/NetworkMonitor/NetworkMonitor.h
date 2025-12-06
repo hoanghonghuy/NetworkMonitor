@@ -9,6 +9,7 @@
 
 #include "NetworkMonitor/Common.h"
 #include "NetworkMonitor/NetworkCalculator.h"
+#include "NetworkMonitor/Interfaces/INetworkStatsProvider.h"
 #include <windows.h>
 #include <netioapi.h>
 #include <iphlpapi.h>
@@ -21,11 +22,11 @@
 namespace NetworkMonitor
 {
 
-class NetworkMonitorClass
+class NetworkMonitorClass : public INetworkStatsProvider
 {
 public:
     NetworkMonitorClass();
-    ~NetworkMonitorClass();
+    ~NetworkMonitorClass() override;
 
     /**
      * Start monitoring network interfaces
@@ -42,19 +43,19 @@ public:
      * Check if monitoring is running
      * @return true if running, false otherwise
      */
-    bool IsRunning() const { return m_isRunning; }
+    bool IsRunning() const override { return m_isRunning; }
 
     /**
      * Get statistics for all active network interfaces
      * @return Vector of network statistics
      */
-    std::vector<NetworkStats> GetAllStats();
+    std::vector<NetworkStats> GetAllStats() override;
 
     /**
      * Get aggregated statistics from all interfaces
      * @return Aggregated network stats
      */
-    NetworkStats GetAggregatedStats();
+    NetworkStats GetAggregatedStats() override;
 
     /**
      * Get statistics for a specific interface
@@ -62,13 +63,13 @@ public:
      * @param stats Output network stats
      * @return true if interface found, false otherwise
      */
-    bool GetInterfaceStats(const std::wstring& interfaceName, NetworkStats& stats);
+    bool GetInterfaceStats(const std::wstring& interfaceName, NetworkStats& stats) override;
 
     /**
      * Update network statistics (call periodically)
      * @return true if update successful, false otherwise
      */
-    bool Update();
+    bool Update() override;
 
 private:
     /**

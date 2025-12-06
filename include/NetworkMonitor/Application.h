@@ -13,6 +13,7 @@
 #include "NetworkMonitor/TrayIcon.h"
 #include "NetworkMonitor/TaskbarOverlay.h"
 #include "NetworkMonitor/PingMonitor.h"
+#include "NetworkMonitor/HotkeyManager.h"
 #include <windows.h>
 #include <memory>
 
@@ -70,8 +71,7 @@ private:
     // Helper methods
     bool RegisterWindowClass();
     bool CreateMainWindow();
-    void RegisterHotkeys();
-    void UnregisterHotkeys();
+    void SetupHotkeys();
     void CenterDialogOnScreen(HWND hDlg);
     NetworkStats GetCurrentStatsForConfig();
     void LogHistorySample(const NetworkStats& stats);
@@ -85,6 +85,7 @@ private:
     std::unique_ptr<TrayIcon> m_pTrayIcon;
     std::unique_ptr<TaskbarOverlay> m_pTaskbarOverlay;
     std::unique_ptr<PingMonitor> m_pPingMonitor;
+    std::unique_ptr<HotkeyManager> m_pHotkeyManager;
 
     // Application state
     AppConfig m_config;

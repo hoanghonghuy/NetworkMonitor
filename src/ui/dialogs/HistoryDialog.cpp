@@ -6,6 +6,7 @@
 
 #include "NetworkMonitor/HistoryDialog.h"
 #include "NetworkMonitor/HistoryLogger.h"
+#include "NetworkMonitor/DialogThemeHelper.h"
 #include "NetworkMonitor/Utils.h"
 #include "NetworkMonitor/ThemeHelper.h"
 #include "../../../resources/resource.h"
@@ -149,16 +150,12 @@ INT_PTR CALLBACK HistoryDialog::InstanceDialogProc(HWND hDlg, UINT message, WPAR
             if (m_pConfig && m_pConfig->darkTheme)
             {
                 HDC hdc = reinterpret_cast<HDC>(wParam);
-                static HBRUSH s_darkBrush = nullptr;
-                if (!s_darkBrush)
-                {
-                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
-                }
+                HBRUSH darkBrush = DialogThemeHelper::GetDarkBackgroundBrush();
 
-                SetTextColor(hdc, RGB(230, 230, 230));
+                SetTextColor(hdc, DialogThemeHelper::DARK_TEXT);
                 SetBkMode(hdc, TRANSPARENT);
 
-                return reinterpret_cast<INT_PTR>(s_darkBrush);
+                return reinterpret_cast<INT_PTR>(darkBrush);
             }
             break;
         }
@@ -182,7 +179,7 @@ INT_PTR CALLBACK HistoryDialog::InstanceDialogProc(HWND hDlg, UINT message, WPAR
 
                         COLORREF backColor = pressed ? RGB(50, 50, 50) : RGB(40, 40, 40);
                         COLORREF borderColor = RGB(90, 90, 90);
-                        COLORREF textColor = disabled ? RGB(160, 160, 160) : RGB(230, 230, 230);
+                        COLORREF textColor = disabled ? RGB(160, 160, 160) : DialogThemeHelper::DARK_TEXT;
 
                         HBRUSH hBrush = CreateSolidBrush(backColor);
                         FillRect(hdc, &rc, hBrush);

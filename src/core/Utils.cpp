@@ -5,6 +5,7 @@
 // ============================================================================
 
 #include "NetworkMonitor/Utils.h"
+#include "NetworkMonitor/DialogThemeHelper.h"
 #include "NetworkMonitor/ThemeHelper.h"
 #include "../../resources/resource.h"
 #include <sstream>
@@ -308,16 +309,12 @@ namespace
             if (data && data->darkTheme)
             {
                 HDC hdc = reinterpret_cast<HDC>(wParam);
-                static HBRUSH s_darkBrush = nullptr;
-                if (!s_darkBrush)
-                {
-                    s_darkBrush = CreateSolidBrush(RGB(32, 32, 32));
-                }
+                HBRUSH darkBrush = DialogThemeHelper::GetDarkBackgroundBrush();
 
-                SetTextColor(hdc, RGB(230, 230, 230));
+                SetTextColor(hdc, DialogThemeHelper::DARK_TEXT);
                 SetBkMode(hdc, TRANSPARENT);
 
-                return reinterpret_cast<INT_PTR>(s_darkBrush);
+                return reinterpret_cast<INT_PTR>(darkBrush);
             }
             break;
 
